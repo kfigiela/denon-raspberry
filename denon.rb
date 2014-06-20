@@ -1,28 +1,32 @@
 # encoding: ASCII-8BIT
-require 'em/pure_ruby'
 require 'serialport'
 require 'em-serialport/serial_port'
 require 'ruby-mpd'
 require_relative 'mpd'
 
 class Denon < EventMachine::Connection
-  def initialize(*args)
+  def post_init
     @buffer = "".force_encoding("ASCII-8BIT")
   end
   
   def receive_data data
     @buffer += data      
-    if start = @buffer.index("\x00\xff\x55".force_encoding("ASCII-8BIT")) and (@buffer.length > start + 3)
-      payload_length = 2 + @buffer.unpack('C*')[start+3]
-      packet_length = 3 + 3 + payload_length
-      if @buffer.length > start+packet_length
-        # puts "Have full packet of #{packet_length} bytes, payload #{payload_length}"
-        packet = @buffer[start+6...(start+packet_length)]
-        # display_buffer packet
-        got_packet packet
-        @buffer = @buffer[start+packet_length+1..-1]
+    have_packet = false
+    begin
+      have_packet = false
+      if start = @buffer.index("\x00\xff\x55".force_encoding("ASCII-8BIT")) and (@buffer.length > start + 3)
+        payload_length = 2 + @buffer.unpack('C*')[start+3]
+        packet_length = 3 + 3 + payload_length
+        if @buffer.length > start+packet_length
+          #puts "Have full packet of #{packet_length} bytes, payload #{payload_length}"
+          packet = @buffer[start+6...(start+packet_length)]
+          # display_buffer packet
+          got_packet packet
+          @buffer = (@buffer[start+packet_length+1..-1] or "".force_encoding("ASCII-8BIT"))
+          have_packet = true
+        end
       end
-    end
+    end while have_packet
   end
   
   def display_buffer(str)
