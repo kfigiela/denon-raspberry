@@ -30,9 +30,6 @@ class Denon < EventMachine::Connection
     puts ("%-40s" % bytes.map{|b|"%02x " % [b]}.join) + bytes.map{|b| b.chr}.join.scan(/[[:print:]]/).join
   end
 
-  def on_button(id)
-  end
-
   def on_network_button(id)
   end
   
