@@ -81,7 +81,7 @@ EOM
     if song.nil?
       remove_screen "mpd"
     else
-      touch
+      #touch
       puts "song changed to #{song.artist} - #{song.title}"
       status_line = "%s %s%s %11s" % [
         {play: ">", pause: "|", stop: "S"}[status[:state]], 
@@ -107,7 +107,7 @@ EOM
       remove_screen "mpd_info"
       send_data "screen_del mpd_info\n"
     else   
-      touch   
+      #touch   
       artist = (I18n.transliterate (song.artist or '')).center(16)
       title = (I18n.transliterate (song.title or File.basename(song.file, ".*"))).center(16)
 
