@@ -1,4 +1,15 @@
+TIOCSTI=0x00005412
+
 class MyDenon < Denon  
+
+  def initialize
+  end
+  
+  def tty_send(key)
+    File.open('/dev/tty1','w') do |tty|
+      key.chars { |char| tty.ioctl(TIOCSTI, char) }
+    end
+  end
 
   def lcd=(lcd)
     @lcd = lcd
@@ -61,23 +72,19 @@ class MyDenon < Denon
   end
 
   def send_keys(keys)
-    EM.defer do
-      system(%Q{tmux send-keys -t "console:0" #{keys}})
-    end
+    EM.defer { system(%Q{tmux send-keys -t "console:0" #{keys}}) }
   end
 
   def enable_airplay
-    EM::defer do 
-      system "service shairplay start"
-    end
+    EM.defer { system "service shairplay start" }
     @lcd.display_screen 'airplay', "AirPlay"
+    @lcd.touch
   end
 
   def disable_airplay
-    EM::defer do
-      system "pgrep shairplay && sudo service shairplay stop"
-    end
+    EM.defer { system "pgrep shairplay && sudo service shairplay stop" }
     @lcd.remove_screen 'airplay'
+    @lcd.touch    
   end
 
   def enable_music
@@ -107,6 +114,7 @@ class MyDenon < Denon
   end  
   
   def on_network_button(button)
+    @lcd.touch
     case button
     when :next
       mpd :next      
@@ -117,17 +125,17 @@ class MyDenon < Denon
     when :rewind
       mpd_prev_album
     when :up
-      send_keys "Up"
+      tty_send "\e[A"
     when :down
-      send_keys "Down"
+      tty_send "\e[B"
     when :left
-      send_keys "PgUp"
+      tty_send "\e[5~"
     when :right
-      send_keys "PgDn"
+      tty_send "\e[6~"
     when :enter
-      send_keys "Enter"
+      tty_send "\n"
     when :mode
-      send_keys "Tab"
+      tty_send "\t"
     when :play_pause
       mpd_pause
     when :play
@@ -151,13 +159,9 @@ class MyDenon < Denon
     when :clear
       send_keys "c"
     when :info
-      EM.defer do
-        system("sudo toggle_display")
-      end
+      EM.defer { system("sudo toggle_display") }
     when :program
-      EM.defer do 
-        system("loadalbum; sudo sync; sudo hdparm -y /dev/sda")
-      end
+      EM.defer { system("loadalbum; sudo sync; sudo hdparm -y /dev/sda") }
     end
   end
 

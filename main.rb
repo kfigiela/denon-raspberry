@@ -1,5 +1,6 @@
 require 'bundler/setup' 
 
+require 'eventmachine'
 require 'em/pure_ruby'
 require_relative 'lcd'
 require_relative 'denon'
@@ -19,4 +20,5 @@ EventMachine.run do
     c.mpd = mpd
   end
   EventMachine.connect '127.0.0.1', 6600, MPDIdle, mpd, lcd
+
 end
