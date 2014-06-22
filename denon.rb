@@ -134,13 +134,13 @@ class Denon < EventMachine::Connection
         on_cd_function :cd
       when "\x60\x00\x00" # CD - ipod
         on_cd_function :cd_usb
-      when "\x61\x00\x00" # Online music
-        on_network_function :online_music
-      when "\x63\x00\x00" # Music server
-        on_network_function :music_server
-      when "\x62\x00\x00" # Internet Radio
+      when "\x61\x00\x00"
         on_network_function :internet_radio
-      when "\x64\x00\x00" # Network USB
+      when "\x63\x00\x00"
+        on_network_function :online_music
+      when "\x62\x00\x00" 
+        on_network_function :music_server
+      when "\x64\x00\x00"
         on_network_function :network_usb
         
         
