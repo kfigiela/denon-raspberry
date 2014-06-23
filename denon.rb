@@ -1,10 +1,26 @@
 # encoding: ASCII-8BIT
 require 'serialport'
-require 'em-serialport/serial_port'
 require 'ruby-mpd'
+require 'ostruct'
 require_relative 'mpd'
 
 class Denon < EventMachine::Connection
+  
+  attr_reader :status
+
+  Station = Struct.new(:name, :frequency)
+  Alarm = Struct.new(:on, :off, :status, :function, :preset)
+  def initialize
+    @status = Struct.new(:source, :cd_function, :network_function, :display_brightness, :radio, :audio, :alarm, :power, :sleep).new 
+    @status.radio = Struct.new(:presets, :band, :stereo, :current_preset, :current_frequency).new
+    @status.radio.band = :fm
+    @status.radio.presets = Hash.new { |h,k| h[k] = Station.new }
+    @status.audio = Struct.new(:volume, :mute, :bass, :treble, :balance, :sdb, :sdirect).new
+    @status.alarm = Struct.new(:once, :every).new
+    @status.alarm.once  = Alarm.new
+    @status.alarm.every = Alarm.new
+  end
+  
   def post_init
     @buffer = "".force_encoding("ASCII-8BIT")
   end
@@ -41,30 +57,42 @@ class Denon < EventMachine::Connection
   end
   
   def on_display_brightness(brightness)
+    @status.display_brightness = brightness
   end
   
-  def on_cd_function(funciton)
+  def on_cd_function(function)
+    @status.cd_function = function
   end
 
-  def on_network_function(funciton)
+  def on_network_function(function)
+    @status.network_function = function
   end
   
   def on_volume(vol)
+    @status.audio.volume = vol
   end
   
   def on_mute(status)
+    @status.audio.mute = status
   end
   
   def on_sleep_timer(time)
+    @status.sleep = Time.now + time.to_i*60
   end
   
   def on_source(source)
+    @status.source = source
   end
   
   def on_amp_on
+    @status.power = :on
   end
   
   def on_amp_off
+    @status.power = :off
+  end
+
+  def on_radio
   end
   
   def got_packet(data)
@@ -160,22 +188,26 @@ class Denon < EventMachine::Connection
           on_sleep_timer nil
         when /SLP(\d\d\d)/
           on_sleep_timer $1.to_i
-        when /PSBAS(\d\d)/
+        when /PSBAS (\d\d)/
+          @status.audio.bass = $1.to_i - 10
           puts "Bass set to #{$1.to_i - 10} dB"
-        when /PSTRE(\d\d)/
+        when /PSTRE (\d\d)/
+          @status.audio.treble = $1.to_i - 10
           puts "Treble set to #{$1.to_i - 10} dB"
-        when /PSBAL(\d\d)/
+        when /PSBAL (\d\d)/
+          @status.audio.balance = $1.to_i - 6
           puts "Balance set to #{$1} (where 6 is center)"
         when /PSSDB (ON|OFF)/
+          @status.audio.sdb = $1.downcase.to_sym
           puts "SDB tone #{$1}"
         when /PSSDI (ON|OFF)/
+          @status.audio.sdirect = $1.downcase.to_sym
           puts "s.direct #{$1}"
           
         when "SINETWORK"
           on_source :network
         when "SICD"
           on_source :cd
-        
         when "SITUNER"
           on_source :tuner
         when "SIAUX1"
@@ -186,35 +218,60 @@ class Denon < EventMachine::Connection
           on_source :digital
           
         when "TMANFM" # Tuner tuned
-          puts "Band set to FM"
+          @status.radio.band = :fm
+          on_radio :band
         when "TMANMANUAL"
-          puts "Tuner set to manual (mono?) mode"
+          @status.radio.stereo = :mono
+          on_radio :stereo
         when "TMANAUTO"
-          puts "Tuner set to automatic stereo mode"
+          @status.radio.stereo = :auto
+          on_radio :stereo
         when /TPAN(\d\d)/ # Tuner tuned
-          puts "Tuned to preset #{$1.to_i}"
+          @status.radio.current_preset = $1.to_i
+          on_radio :tune_preset
         when "TPANOFF" 
-          puts "Tuned out of present (possibly manual tuning)"
+          @status.radio.current_preset = nil
+          on_radio :tune_preset
         when /TFAN(\d{6})/ # Tuner tuned
-          puts "Tuned to FM #{$1.to_i/100.0}"
-        when /SSTPN(\d\d)(.{9})(\d{8})/ # Station def
-          puts "Preset #{$1.to_i} [#{$2}] @ #{$3.to_i/100.0}"
+          @status.radio.current_frequency = frequency
+          on_radio :tune_frequency
+        when /SSTPN(\d\d)(.{9})(\d{8})/ 
+          index = $1.to_i
+          name  = $2
+          freq  = $3.to_i/100.0
+          if freq != 0.0
+            preset           = @status.radio.presets[index]
+            preset.name      = name
+            preset.frequency = freq
+          else
+            @status.radio.presets.delete[index]
+          end
+          on_radio :store_preset
         when "PWSTANDBY"
           on_amp_off
         when "PWON"
           on_amp_on
         when /TS(ONCE|EVERY) 2(\d\d)(\d\d)-2(\d\d)(\d\d) (..)(\d\d)/
-          type = $1
+          type  = $1
           h_on  = $2.to_i
           m_on  = $3.to_i
           h_off = $4.to_i
           m_off = $5.to_i
           function = {"NW" => "Internet Radio", "NU" => "iPad/USB (Network)", "CD" => "CD", "CU" => "iPad/USB (CD)", "TU" => "Tuner", "A1" => "Analog 1", "A2" => "Analog 2", "DI" => "Digital"}[$6]
           preset = $7.to_i
-
+          
+          alarm = if type == 'ONCE' then @status.alarm.once else @status.alarm.every end
+          
+          alarm.on  = [h_on, m_on]
+          alarm.off = [h_off, m_off]
+          alarm.function = function
+          alarm.preset = preset
+          
     
           puts "Set #{$1} alarm from #{h_on}:#{m_on} to #{h_off}:#{m_off} using #{function} at preset #{preset}"
         when /TO(ON|OFF) (ON|OFF)/
+          @status.alarm.once.status = $1.downcase.to_sym
+          @status.alarm.every.status = $1.downcase.to_sym
           puts "Alarm ONCE: #{$1}, EVERY: #{$2}"
         else
           puts "Unknown string command #{command}"
