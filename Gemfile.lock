@@ -1,9 +1,6 @@
 GEM
   remote: https://rubygems.org/
   specs:
-    em-serialport (0.0.3)
-      eventmachine
-      serialport
     eventmachine (1.0.3)
     i18n (0.6.9)
     ruby-mpd (0.3.1)
@@ -13,7 +10,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  em-serialport
   eventmachine
   i18n
   ruby-mpd
+  serialport
