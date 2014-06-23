@@ -1,3 +1,5 @@
+require_relative 'mpd_operations'
+
 TIOCSTI=0x00005412
 
 class DevNull < EM::Connection
@@ -5,69 +7,10 @@ class DevNull < EM::Connection
   end
 end
 
-class MyDenon < Denon
-  def initialize(mpd, lcd)
-    super()
-    @lirc = EventMachine.connect_unix_domain "/var/run/lirc/lircd", DevNull
-    @rewind = nil
-    @mpd = mpd
-    @lcd = lcd
-  end
-  
+module MyOperations
   def tty_send(key)
     File.open('/dev/tty1','w') do |tty|
       key.chars { |char| tty.ioctl(TIOCSTI, char) }
-    end
-  end
-
-  def load_playlist(name, pos = nil)
-    @mpd.noidle do |mpd|
-      mpd.clear
-      mpd.playlists.find { |p| p.name == name }.load
-      mpd.play(pos)
-    end
-  end 
-
-  def mpd(action)
-    @mpd.noidle do |mpd|
-      mpd.send(action)
-    end
-  end
-
-  def mpd_toggle(action)
-    @mpd.noidle do |mpd|
-      mpd.send("#{action.to_s}=".to_sym, (not mpd.status[action.to_sym]))
-    end
-  end
-
-  def mpd_pause
-    @mpd.noidle do |mpd|
-      if mpd.playing?
-        mpd.pause = 1
-      else
-        mpd.play
-      end
-    end
-  end
-  
-  
-  def mpd_next_album
-    @mpd.noidle do |mpd|
-      current_song = mpd.current_song
-      status = mpd.status
-      idx = mpd.queue((status[:song])..(status[:playlistlength])).find_index{|s| s.album != current_song.album }
-      mpd.play status[:song] + idx if idx
-    end
-  end
-  
-  def mpd_prev_album
-    @mpd.noidle do |mpd|
-      status = mpd.status
-      if status[:song] > 0
-        current_song = mpd.queue[status[:song]-1]
-        idx = (mpd.queue(0...(status[:song])).rindex {|s| s.album != current_song.album })
-        mpd.play (idx+1) if idx
-      end
     end
   end
 
@@ -97,10 +40,23 @@ class MyDenon < Denon
   end
   
   def ir_send(device = "AVR10", button)
-    # EM.add_timer 0.1 do
     @lirc.send_data "SEND_ONCE #{device} #{button}\n"
-    # end
+  end  
+end
+
+class MyDenon < Denon
+  include MPDOperations
+  include MyOperations
+  
+  def initialize(mpd, lcd)
+    super()
+    
+    @lirc = EventMachine.connect_unix_domain "/var/run/lirc/lircd", DevNull
+    @rewind = nil
+    @mpd = mpd
+    @lcd = lcd
   end
+
   
   def on_display_brightness(brigtness)
     super
