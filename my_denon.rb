@@ -1,8 +1,17 @@
 TIOCSTI=0x00005412
 
-class MyDenon < Denon  
+class DevNull < EM::Connection
+  def receive_data data
+  end
+end
 
-  def initialize
+class MyDenon < Denon
+  def initialize(mpd, lcd)
+    super()
+    @lirc = EventMachine.connect_unix_domain "/var/run/lirc/lircd", DevNull
+    @rewind = nil
+    @mpd = mpd
+    @lcd = lcd
   end
   
   def tty_send(key)
@@ -11,19 +20,11 @@ class MyDenon < Denon
     end
   end
 
-  def lcd=(lcd)
-    @lcd = lcd
-  end
-  
-  def mpd=(mpd)
-    @mpd = mpd
-  end
-  
-  def load_playlist(name)
+  def load_playlist(name, pos = nil)
     @mpd.noidle do |mpd|
       mpd.clear
       mpd.playlists.find { |p| p.name == name }.load
-      mpd.play
+      mpd.play(pos)
     end
   end 
 
@@ -41,8 +42,7 @@ class MyDenon < Denon
 
   def mpd_pause
     @mpd.noidle do |mpd|
-      case mpd.status[:state]
-      when :play
+      if mpd.playing?
         mpd.pause = 1
       else
         mpd.play
@@ -71,10 +71,49 @@ class MyDenon < Denon
     end
   end
 
-  def send_keys(keys)
-    EM.defer { system(%Q{tmux send-keys -t "console:0" #{keys}}) }
-  end
-
+  # def send_keys(keys)
+  #   EM.defer { system(%Q{tmux send-keys -t "console:0" #{keys}}) }
+  # end
+  #
+  # def start_rewind(dir)
+  #   puts "start..."
+  #   if @rewind #and @rewind == dir
+  #     puts "already rewind #{@step}"
+  #     @step = 2 if @step < 2
+  #   else
+  #     puts 'start rewind'
+  #     # stop_rewind
+  #     @rewind = dir
+  #     # EM.defer {
+  #       system("irsend SEND_START AVR10 CD_#{dir}; echo '               OK'")
+  #       puts "Started"
+  #     # }
+  #     @rewind_timer.cancel if @rewind_timer
+  #     @step = 2
+  #     @rewind_timer = EM::PeriodicTimer.new 0.1 do
+  #       puts "Timer #{@step}"
+  #       if @step < 1
+  #         stop_rewind
+  #       else
+  #         @step = @step - 1
+  #       end
+  #     end
+  #   end
+  # end
+  #
+  # def stop_rewind
+  #   if @rewind
+  #     dir = @rewind
+  #     @rewind_timer.cancel if @rewind_timer
+  #     EM.defer {
+  #       system("irsend SEND_STOP AVR10 CD_#{dir}")
+  #     }
+  #     puts "stop rewind"
+  #     @rewind_timer = nil
+  #     @rewind = nil
+  #   end
+  # end
+  
   def enable_airplay
     EM.defer { system "service shairplay start" }
     @lcd.display_screen 'airplay', "AirPlay"
@@ -100,7 +139,14 @@ class MyDenon < Denon
     end
   end
   
+  def ir_send(device = "AVR10", button)
+    # EM.add_timer 0.1 do
+    @lirc.send_data "SEND_ONCE #{device} #{button}\n"
+    # end
+  end
+  
   def on_display_brightness(brigtness)
+    super
     @lcd.backlight = case brigtness
     when :bright
       1023
@@ -114,6 +160,7 @@ class MyDenon < Denon
   end  
   
   def on_network_button(button)
+    super
     @lcd.touch
     case button
     when :next
@@ -164,8 +211,34 @@ class MyDenon < Denon
       EM.defer { system("loadalbum; sudo sync; sudo hdparm -y /dev/sda") }
     end
   end
+  
+  
+  def on_cd_button(button)
+    super
+    case button
+    when :next
+      ir_send :AVR10, :CD_NEXT
+    when :previous
+      ir_send :AVR10, :CD_PREV
+    when :forward
+      ir_send :AVR10, :CD_FWD
+    when :rewind
+      ir_send :AVR10, :CD_BKW
+    when :play_pause
+      ir_send :AVR10, :CD_PAUSE
+    when :play
+      ir_send :AVR10, :CD_PLAY
+    when :stop
+      ir_send :AVR10, :CD_STOP
+    when :repeat
+      ir_send :AVR10, :CD_AB
+    when :random
+      ir_send :AVR10, :CD_INTRO
+    end
+  end
 
   def on_network_function(function)
+    super
     case function
     when :online_music
       disable_airplay
@@ -177,6 +250,7 @@ class MyDenon < Denon
   end
   
   def on_source(source)
+    super
     case source
     when :network
       enable_music
@@ -188,6 +262,7 @@ class MyDenon < Denon
   end
   
   def on_amp_off
+    super
     disable_music
     disable_airplay
     @lcd.backlight = 0
