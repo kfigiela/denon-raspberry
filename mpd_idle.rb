@@ -22,8 +22,8 @@ class MPDIdle < EM::Connection
     music_path = "/storage/music/annex/"
     if status[:state] == :play    
       commands = []
-      commands << (%Q{vmtouch -f -t -m 200m #{(music_path + @mpd.queue[status[:nextsong]].file).shellescape} }) if status[:nextsong]
-      commands << (%Q{vmtouch -f -t -m 200m #{(music_path + @mpd.current_song.file).shellescape}  })
+      commands << (%Q{vmtouch -f -t -m 200m #{(music_path + @mpd.queue[status[:nextsong]].file).shellescape} > /dev/null}) if status[:nextsong]
+      commands << (%Q{vmtouch -f -t -m 200m #{(music_path + @mpd.current_song.file).shellescape} > /dev/null})
       EM.defer { commands.each { |c| system(c) } }
     end
     
