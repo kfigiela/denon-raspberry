@@ -56,7 +56,7 @@ class LCD < EM::Connection
   def display_alert(msg)
     send_data <<-EOM
 screen_add lcd_alert
-screen_set lcd_alert -cursor off -heartbeat off -backlight on -priority alert -timeout 80
+screen_set lcd_alert -cursor off -heartbeat off -backlight on -priority input -timeout 80
 widget_add lcd_alert txt scroller
 widget_set lcd_alert txt 1 1 16 2 h 6 "#{msg}"
 EOM
@@ -93,7 +93,7 @@ EOM
 
       send_data <<-EOM
 screen_add mpd
-screen_set mpd -timeout 80 -cursor off -heartbeat off -backlight on -priority input
+screen_set mpd -timeout 80 -cursor off -heartbeat off -backlight on -priority alert
 widget_add mpd txt scroller
 widget_set mpd txt 1 1 16 1 v 6 "#{status_line}"
 widget_add mpd txt2 scroller
@@ -105,7 +105,6 @@ EOM
   def song_screen(song, status)
     if status[:state] == :stop or status[:state] == :pause or song.nil?
       remove_screen "mpd_info"
-      send_data "screen_del mpd_info\n"
     else   
       #touch   
       artist = (I18n.transliterate (song.artist or '')).center(16)
