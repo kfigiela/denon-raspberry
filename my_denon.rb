@@ -52,7 +52,6 @@ class MyDenon < Denon
     super()
     
     @lirc = EventMachine.connect_unix_domain "/var/run/lirc/lircd", DevNull
-    @rewind = nil
     @mpd = mpd
     @lcd = lcd
   end
