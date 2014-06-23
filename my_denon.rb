@@ -71,49 +71,6 @@ class MyDenon < Denon
     end
   end
 
-  # def send_keys(keys)
-  #   EM.defer { system(%Q{tmux send-keys -t "console:0" #{keys}}) }
-  # end
-  #
-  # def start_rewind(dir)
-  #   puts "start..."
-  #   if @rewind #and @rewind == dir
-  #     puts "already rewind #{@step}"
-  #     @step = 2 if @step < 2
-  #   else
-  #     puts 'start rewind'
-  #     # stop_rewind
-  #     @rewind = dir
-  #     # EM.defer {
-  #       system("irsend SEND_START AVR10 CD_#{dir}; echo '               OK'")
-  #       puts "Started"
-  #     # }
-  #     @rewind_timer.cancel if @rewind_timer
-  #     @step = 2
-  #     @rewind_timer = EM::PeriodicTimer.new 0.1 do
-  #       puts "Timer #{@step}"
-  #       if @step < 1
-  #         stop_rewind
-  #       else
-  #         @step = @step - 1
-  #       end
-  #     end
-  #   end
-  # end
-  #
-  # def stop_rewind
-  #   if @rewind
-  #     dir = @rewind
-  #     @rewind_timer.cancel if @rewind_timer
-  #     EM.defer {
-  #       system("irsend SEND_STOP AVR10 CD_#{dir}")
-  #     }
-  #     puts "stop rewind"
-  #     @rewind_timer = nil
-  #     @rewind = nil
-  #   end
-  # end
-  
   def enable_airplay
     EM.defer { system "service shairplay start" }
     @lcd.display_screen 'airplay', "AirPlay"
