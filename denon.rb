@@ -92,7 +92,7 @@ class Denon < EventMachine::Connection
     @status.power = :off
   end
 
-  def on_radio
+  def on_radio(what)
   end
   
   def got_packet(data)

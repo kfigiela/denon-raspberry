@@ -63,8 +63,8 @@ class DemoDenon < Denon
     puts "Amp is off"
   end
 
-  def on_radio
-    puts "Radio operation happened, see @status"
+  def on_radio(what)
+    puts "Radio operation #{what} happened, see @status"
   end
 
 end
