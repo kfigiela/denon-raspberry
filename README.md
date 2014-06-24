@@ -24,7 +24,8 @@ Also, thread at Raspberry Pi forum: http://www.raspberrypi.org/forums/viewtopic.
 * `lcd.rb` – logic for lcdproc screen
 * `mpd.rb` – monkeypatch `ruby-mpd` to add idle support
 * `mpd_idle.rb` – MPD idle with EventMachine for LCD updates and preloading audio files to memory
-* 
+
+
 ## How to use
 
 * Clone repo
