@@ -8,17 +8,26 @@ class Denon < EventMachine::Connection
   
   attr_reader :status
 
+  class Status < Struct.new(:source, :cd_function, :network_function, :display_brightness, :radio, :audio, :alarm, :power, :sleep)
+    def initialize
+      super
+      self.radio = Radio.new
+      self.radio.band = :fm
+      self.radio.presets = Hash.new
+      self.audio = Audio.new
+      self.alarm = Alarms.new
+      self.alarm.once  = Alarm.new
+      self.alarm.every = Alarm.new
+    end
+  end
   Station = Struct.new(:name, :frequency)
   Alarm = Struct.new(:on, :off, :status, :function, :preset)
+  Radio = Struct.new(:presets, :band, :stereo, :current_preset, :current_frequency)
+  Audio = Struct.new(:volume, :mute, :bass, :treble, :balance, :sdb, :sdirect)
+  Alarms = Struct.new(:once, :every)
+  
   def initialize
-    @status = Struct.new(:source, :cd_function, :network_function, :display_brightness, :radio, :audio, :alarm, :power, :sleep).new 
-    @status.radio = Struct.new(:presets, :band, :stereo, :current_preset, :current_frequency).new
-    @status.radio.band = :fm
-    @status.radio.presets = Hash.new { |h,k| h[k] = Station.new }
-    @status.audio = Struct.new(:volume, :mute, :bass, :treble, :balance, :sdb, :sdirect).new
-    @status.alarm = Struct.new(:once, :every).new
-    @status.alarm.once  = Alarm.new
-    @status.alarm.every = Alarm.new
+    @status = Status.new
   end
   
   def post_init
@@ -50,49 +59,75 @@ class Denon < EventMachine::Connection
     puts ("%-40s" % bytes.map{|b|"%02x " % [b]}.join) + bytes.map{|b| b.chr}.join.scan(/[[:print:]]/).join
   end
 
+  def on_status(what)
+  end
+  
   def on_network_button(id)
   end
   
   def on_cd_button(id)
   end
   
+  def on_analog1_button(id)
+  end
+  
+  def on_analog2_button(id)
+  end
+
+  def on_digital_button(id)
+  end
+  
   def on_display_brightness(brightness)
     @status.display_brightness = brightness
+    on_status :display_brightness
   end
   
   def on_cd_function(function)
     @status.cd_function = function
+    on_status :cd_function
   end
 
   def on_network_function(function)
     @status.network_function = function
+    on_status :network_function
   end
   
   def on_volume(vol)
     @status.audio.volume = vol
+    on_status :volume
   end
   
   def on_mute(status)
     @status.audio.mute = status
+    on_status :mute
   end
   
   def on_sleep_timer(time)
-    @status.sleep = Time.now + time.to_i*60
+    @status.sleep = if time
+      Time.now + time.to_i*60
+    else
+      nil
+    end
+    on_status :sleep_timer
   end
   
   def on_source(source)
     @status.source = source
+    on_status :source
   end
   
   def on_amp_on
     @status.power = :on
+    on_status :power
   end
   
   def on_amp_off
     @status.power = :off
+    on_status :power
   end
 
   def on_radio(what)
+    on_status :radio
   end
   
   def got_packet(data)
@@ -233,18 +268,19 @@ class Denon < EventMachine::Connection
           @status.radio.current_preset = nil
           on_radio :tune_preset
         when /TFAN(\d{6})/ # Tuner tuned
-          @status.radio.current_frequency = frequency
+          @status.radio.current_frequency = $1.to_i/100.0
           on_radio :tune_frequency
         when /SSTPN(\d\d)(.{9})(\d{8})/ 
           index = $1.to_i
           name  = $2
           freq  = $3.to_i/100.0
           if freq != 0.0
+            @status.radio.presets[index] ||= Station.new
             preset           = @status.radio.presets[index]
             preset.name      = name
             preset.frequency = freq
           else
-            @status.radio.presets.delete[index]
+            @status.radio.presets.delete(index)
           end
           on_radio :store_preset
         when "PWSTANDBY"

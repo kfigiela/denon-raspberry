@@ -48,14 +48,34 @@ class MyDenon < Denon
   include MPDOperations
   include MyOperations
   
-  def initialize(mpd, lcd)
-    super()
-    
+  def initialize(mpd, lcd, ui)    
     @lirc = EventMachine.connect_unix_domain "/var/run/lirc/lircd", DevNull
     @mpd = mpd
     @lcd = lcd
+    @ui = ui
+    
+    @status = if File.exists?('status.bin')
+      begin
+        File.open('status.bin') { |file| Marshal.load(file) } 
+      rescue Exception => e
+        puts "Failer reading state"
+        puts e.message
+        Status.new
+      end
+    else
+        Status.new
+    end    
+    on_status(:boot)
+    EM.defer do
+      system "gpio -g mode 27 out"
+      system "gpio -g write 27 0"
+    end
   end
 
+  def on_status(what)
+    File.write('status.bin', Marshal.dump(@status))
+    @ui.on_status(what, @status)
+  end
   
   def on_display_brightness(brigtness)
     super
