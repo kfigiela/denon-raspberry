@@ -1,7 +1,11 @@
 GEM
   remote: https://rubygems.org/
   specs:
+    em-websocket (0.5.1)
+      eventmachine (>= 0.12.9)
+      http_parser.rb (~> 0.6.0)
     eventmachine (1.0.3)
+    http_parser.rb (0.6.0)
     i18n (0.6.9)
     ruby-mpd (0.3.1)
     serialport (1.3.0)
@@ -10,6 +14,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  em-websocket
   eventmachine
   i18n
   ruby-mpd

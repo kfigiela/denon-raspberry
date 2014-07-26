@@ -15,6 +15,11 @@ class LCD < EM::Connection
   
   def post_init
     send_command "hello"
+    EM.defer do
+      system "gpio mode 1 pwm"
+      # system "gpio -g pwm 18 1023"
+      set_brightness (@backlight || 1023)
+    end
   end
   
   def receive_data(data)
@@ -94,10 +99,10 @@ EOM
       send_data <<-EOM
 screen_add mpd
 screen_set mpd -timeout 80 -cursor off -heartbeat off -backlight on -priority alert
-widget_add mpd txt scroller
-widget_set mpd txt 1 1 16 1 v 6 "#{status_line}"
-widget_add mpd txt2 scroller
-widget_set mpd txt2 1 2 16 2 h 6 "#{title_line}"
+widget_add mpd txt string
+widget_set mpd txt 1 1 "#{status_line}"
+widget_add mpd txt2 string
+widget_set mpd txt2 1 2 "#{title_line}"
 EOM
    end
   end
@@ -108,7 +113,8 @@ EOM
     else   
       #touch   
       artist = (I18n.transliterate (song.artist or '')).center(16)
-      title = (I18n.transliterate (song.title or File.basename(song.file, ".*"))).center(16)
+      # title = (I18n.transliterate (song.title or File.basename(song.file, ".*"))).center(16)
+      title = word_wrap(I18n.transliterate (song.title or File.basename(song.file, ".*")))
 
       send_data <<-EOM
 screen_add mpd_info
@@ -116,7 +122,7 @@ screen_set mpd_info -cursor off -heartbeat off -backlight on -priority foregroun
 widget_add mpd_info artist scroller
 widget_add mpd_info title scroller
 widget_set mpd_info artist 1 1 16 1 h 6 "#{artist}"
-widget_set mpd_info title 1 2 16 2 h 6 "#{title}"
+widget_set mpd_info title 1 2 16 2 v 16 "#{title}"
 EOM
     end
   end

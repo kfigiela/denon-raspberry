@@ -39,6 +39,10 @@ module MyOperations
     end
   end
   
+  def stop_cd
+    ir_send :AVR10, :CD_STOP
+  end
+  
   def ir_send(device = "AVR10", button)
     @lirc.send_data "SEND_ONCE #{device} #{button}\n"
   end  
@@ -126,17 +130,27 @@ class MyDenon < Denon
     when :random
       mpd_toggle :random
     when :num1
-      load_playlist "Anathema"
+      load_playlist_by_index 0
     when :num2
-      load_playlist "Riverside"
+      load_playlist_by_index 1
     when :num3
-      load_playlist "Sigur Rós".force_encoding('UTF-8')
+      load_playlist_by_index 2
     when :num4
-      load_playlist "Soundtrack"
+      load_playlist_by_index 3
     when :num5
-      load_playlist "Kizomba"
+      load_playlist_by_index 4
+    when :num6
+      load_playlist_by_index 5
+    when :num7
+      load_playlist_by_index 6
+    when :num8
+      load_playlist_by_index 7
+    when :num9
+      load_playlist_by_index 8
+    when :num0
+      load_playlist_by_index 9
     when :clear
-      send_keys "c"
+      tty_send "c"
     when :info
       EM.defer { system("sudo toggle_display") }
     when :program
@@ -183,13 +197,18 @@ class MyDenon < Denon
   
   def on_source(source)
     super
-    case source
-    when :network
+    if source == :network
       enable_music
       mpd :play
     else
       disable_music
       disable_airplay
+    end
+    
+    if source == :cd
+      nil
+    else
+      stop_cd
     end
   end
   
@@ -197,6 +216,7 @@ class MyDenon < Denon
     super
     disable_music
     disable_airplay
+    stop_cd
     @lcd.backlight = 0
   end
 end
