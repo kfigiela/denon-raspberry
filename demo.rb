@@ -18,6 +18,21 @@ class DemoDenon < Denon
     puts "Button #{id} pressed and the source is CD"
   end
 
+  def on_analog1_button(id)
+    super
+    puts "Button #{id} pressed and the source is Analog 1"
+  end
+  
+  def on_analog2_button(id)
+    super
+    puts "Button #{id} pressed and the source is Analog 2"
+  end
+
+  def on_digital_button(id)
+    super
+    puts "Button #{id} pressed and the source is Digital"
+  end
+
   def on_display_brightness(brightness)
     super
     puts "Display brightness set to #{brightness}"

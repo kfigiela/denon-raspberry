@@ -67,7 +67,7 @@ class Denon < EventMachine::Connection
   
   def on_cd_button(id)
   end
-  
+
   def on_analog1_button(id)
   end
   
@@ -164,13 +164,22 @@ class Denon < EventMachine::Connection
       0x5d => :repeat,
     }
     
+    analog1_buttons = Hash[buttons.map { |k,v| [k.chr+"\x23\x00", v] }]
+    analog2_buttons = Hash[buttons.map { |k,v| [k.chr+"\x24\x00", v] }]
     network_buttons = Hash[buttons.map { |k,v| [k.chr+"\x26\x00", v] }] 
     cd_buttons      = Hash[buttons.map { |k,v| [k.chr+"\x25\x00", v] }]
+    digital_buttons = Hash[buttons.map { |k,v| [k.chr+"\x27\x00", v] }]
 
     if network_buttons.include? data
       on_network_button network_buttons[data]
     elsif cd_buttons.include? data
       on_cd_button cd_buttons[data]
+    elsif analog1_buttons.include? data
+      on_analog1_button analog1_buttons[data]
+    elsif analog2_buttons.include? data
+      on_analog2_button analog1_buttons[data]
+    elsif digital_buttons.include? data
+      on_digital_button analog1_buttons[data]
     else 
       case data
       when "\x43\x00\x00" # Dimmer - bright
