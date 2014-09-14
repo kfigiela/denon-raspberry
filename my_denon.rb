@@ -15,13 +15,13 @@ module MyOperations
   end
 
   def enable_airplay
-    EM.defer { system "service shairplay start" }
+    EM.defer { system "systemctl start shairplay" }
     @lcd.display_screen 'airplay', "AirPlay"
     @lcd.touch
   end
 
   def disable_airplay
-    EM.defer { system "pgrep shairplay && sudo service shairplay stop" }
+    EM.defer { system "systemctl stop shairplay" }
     @lcd.remove_screen 'airplay'
     @lcd.touch    
   end
@@ -62,7 +62,7 @@ class MyDenon < Denon
       begin
         File.open('status.bin') { |file| Marshal.load(file) } 
       rescue Exception => e
-        puts "Failer reading state"
+        puts "Failed reading state"
         puts e.message
         Status.new
       end
@@ -70,10 +70,10 @@ class MyDenon < Denon
         Status.new
     end    
     on_status(:boot)
-    EM.defer do
-      system "gpio -g mode 27 out"
-      system "gpio -g write 27 0"
-    end
+    # EM.defer do
+    #   system "gpio -g mode 27 out"
+    #   system "gpio -g write 27 0"
+    # end
   end
 
   def on_status(what)
@@ -183,10 +183,36 @@ class MyDenon < Denon
     end
   end
 
+  def on_digital_button(button)
+    super
+    def mediakey(id)
+      EM.defer do
+        system "ssh -n mormegil mediakey #{id.to_s}"
+      end
+    end  
+    
+    case button
+    when :next
+      mediakey :next
+    when :previous
+      mediakey :prev
+    when :play_pause
+      mediakey :playpause
+    when :play
+      mediakey :playpause
+    when :stop
+      mediakey :playpause
+    end
+  end
+
+  def on_analog1_button(button)
+    on_cd_button(button)
+  end
+
   def on_network_function(function)
     super
     case function
-    when :online_music
+    when :online_music, :internet_radio
       disable_airplay
       enable_music
     when :music_server
@@ -205,11 +231,11 @@ class MyDenon < Denon
       disable_airplay
     end
     
-    if source == :cd
-      nil
-    else
-      stop_cd
-    end
+    # if source == :cd
+    #   nil
+    # else
+    #   stop_cd
+    # end
   end
   
   def on_amp_off
