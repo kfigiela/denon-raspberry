@@ -177,9 +177,9 @@ class Denon < EventMachine::Connection
     elsif analog1_buttons.include? data
       on_analog1_button analog1_buttons[data]
     elsif analog2_buttons.include? data
-      on_analog2_button analog1_buttons[data]
+      on_analog2_button analog2_buttons[data]
     elsif digital_buttons.include? data
-      on_digital_button analog1_buttons[data]
+      on_digital_button digital_buttons[data]
     else 
       case data
       when "\x43\x00\x00" # Dimmer - bright
