@@ -17,15 +17,22 @@ end
 class WebSocketUI
   include MPDOperations
     
-  def initialize(mpd)
+  def initialize(common)
     @channels = {}
-    @mpd = mpd
-    @lirc = EventMachine.connect_unix_domain "/var/run/lirc/lircd", DevNull
+    @mpd = common.mpd
+    @common = common
+
     start
+
+    @common.events.mpd_status.subscribe { send_all }
+    @common.events.denon_status.subscribe do |status|
+      @last_status = status[1]
+      send_all
+    end
   end
   
   def ir_send(device = "AVR10", button)
-    @lirc.send_data "SEND_ONCE #{device} #{button}\n"
+    @common.lirc.send_data "SEND_ONCE #{device} #{button}\n"
   end  
   
   def start
@@ -80,17 +87,6 @@ class WebSocketUI
     end
   end
   def send_all
-    broadcast({denon: @last_status, mpd: {status: @mpd_status, song: @mpd_song}}.to_json)
-  end
-  
-  def on_status(what, status)
-    @last_status = status
-    send_all
-  end
-  
-  def on_mpd(song, status)
-    @mpd_status = status
-    @mpd_song = song
-    send_all    
+    broadcast({denon: @last_status, mpd: {status: @common.mpd_status, song: @common.mpd_song}}.to_json)
   end
 end

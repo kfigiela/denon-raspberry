@@ -31,6 +31,7 @@ class Denon < EventMachine::Connection
   end
   
   def post_init
+    prepare_regexps
     @buffer = "".force_encoding("ASCII-8BIT")
   end
   
@@ -130,7 +131,7 @@ class Denon < EventMachine::Connection
     on_status :radio
   end
   
-  def got_packet(data)
+  def prepare_regexps
     buttons = {
       0x33 => :stop,
       0x34 => :play,      
@@ -163,23 +164,31 @@ class Denon < EventMachine::Connection
       0x5c => :random,
       0x5d => :repeat,
     }
-    
-    analog1_buttons = Hash[buttons.map { |k,v| [k.chr+"\x23\x00", v] }]
-    analog2_buttons = Hash[buttons.map { |k,v| [k.chr+"\x24\x00", v] }]
-    network_buttons = Hash[buttons.map { |k,v| [k.chr+"\x26\x00", v] }] 
-    cd_buttons      = Hash[buttons.map { |k,v| [k.chr+"\x25\x00", v] }]
-    digital_buttons = Hash[buttons.map { |k,v| [k.chr+"\x27\x00", v] }]
+  
+    @analog1_buttons = Hash[buttons.map { |k,v| [k.chr+"\x23\x00", v] }]
+    @analog2_buttons = Hash[buttons.map { |k,v| [k.chr+"\x24\x00", v] }]
+    @network_buttons = Hash[buttons.map { |k,v| [k.chr+"\x26\x00", v] }] 
+    @cd_buttons      = Hash[buttons.map { |k,v| [k.chr+"\x25\x00", v] }]
+    @digital_buttons = Hash[buttons.map { |k,v| [k.chr+"\x27\x00", v] }]
+  end
+  
+  def got_packet(data)
 
-    if network_buttons.include? data
-      on_network_button network_buttons[data]
-    elsif cd_buttons.include? data
-      on_cd_button cd_buttons[data]
-    elsif analog1_buttons.include? data
-      on_analog1_button analog1_buttons[data]
-    elsif analog2_buttons.include? data
-      on_analog2_button analog2_buttons[data]
-    elsif digital_buttons.include? data
-      on_digital_button digital_buttons[data]
+    # begin
+    #   bytes = data.unpack("C*")
+    #   puts "Packet " +  ("%-40s" % bytes.map{|b|"%02x " % [b]}.join) + bytes.map{|b| b.chr}.join.scan(/[[:print:]]/).join
+    # end
+
+    if @network_buttons.include? data
+      on_network_button @network_buttons[data]
+    elsif @cd_buttons.include? data
+      on_cd_button @cd_buttons[data]
+    elsif @analog1_buttons.include? data
+      on_analog1_button @analog1_buttons[data]
+    elsif @analog2_buttons.include? data
+      on_analog2_button @analog2_buttons[data]
+    elsif @digital_buttons.include? data
+      on_digital_button @digital_buttons[data]
     else 
       case data
       when "\x43\x00\x00" # Dimmer - bright
@@ -195,11 +204,17 @@ class Denon < EventMachine::Connection
 
       ## Inputs (rendundant, also provided by ASCII protocol)
       when "\x33\x00\x9b", "\x01\x03\x00" # Network
+        # on_source :network
       when "\x33\x14\x00", "\x01\x04\x00" # CD
-      when "\x33\x15\x00", "\x01\x05\x00" # Analog1
-      when "\x33\x16\x00", "\x01\x06\x00" # Analog2
-      when "\x33\x17\x00", "\x01\x07\x00" # Digital2
+        # on_source :cd
       when "\x33\x08\x00", "\x01\x08\x00" # Tuner
+        # on_source :tuner
+      when "\x33\x15\x00", "\x01\x05\x00" # Analog1
+        # on_source :aux1
+      when "\x33\x16\x00", "\x01\x06\x00" # Analog2
+        # on_source :aux2
+      when "\x33\x17\x00", "\x01\x07\x00" # Digital
+        # on_source :digital
     
       ## Functions
       when "\x5f\x00\x00" # CD

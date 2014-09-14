@@ -15,26 +15,28 @@ module MyOperations
   end
 
   def enable_airplay
-    EM.defer { system "systemctl start shairplay" }
-    @lcd.display_screen 'airplay', "AirPlay"
-    @lcd.touch
+    EM.system "systemctl start shairplay"
+    @common.lcd_status "AirPlay"
+    @common.lcd_touch
   end
 
   def disable_airplay
-    EM.defer { system "systemctl stop shairplay" }
-    @lcd.remove_screen 'airplay'
-    @lcd.touch    
+    EM.system "systemctl stop shairplay"
+    @common.lcd_status ""
+    @common.lcd_touch
   end
 
   def enable_music
-    @mpd.noidle do |mpd|
+    @common.lcd_status "MPD"      
+    @common.mpd.noidle do |mpd|
       mpd.enableoutput 0
       mpd.play
     end
   end
 
   def disable_music
-    @mpd.noidle do |mpd|
+    @common.lcd_status ""      
+    @common.mpd.noidle do |mpd|
       mpd.disableoutput 0
     end
   end
@@ -44,7 +46,7 @@ module MyOperations
   end
   
   def ir_send(device = "AVR10", button)
-    @lirc.send_data "SEND_ONCE #{device} #{button}\n"
+    @common.lirc.send_data "SEND_ONCE #{device} #{button}\n"
   end  
 end
 
@@ -52,11 +54,8 @@ class MyDenon < Denon
   include MPDOperations
   include MyOperations
   
-  def initialize(mpd, lcd, ui)    
-    @lirc = EventMachine.connect_unix_domain "/var/run/lirc/lircd", DevNull
-    @mpd = mpd
-    @lcd = lcd
-    @ui = ui
+  def initialize(common)    
+    @common = common
     
     @status = if File.exists?('status.bin')
       begin
@@ -70,20 +69,16 @@ class MyDenon < Denon
         Status.new
     end    
     on_status(:boot)
-    # EM.defer do
-    #   system "gpio -g mode 27 out"
-    #   system "gpio -g write 27 0"
-    # end
   end
 
   def on_status(what)
     File.write('status.bin', Marshal.dump(@status))
-    @ui.on_status(what, @status)
+    @common.events.denon_status.push [what, @status]
   end
   
   def on_display_brightness(brigtness)
     super
-    @lcd.backlight = case brigtness
+    @common.lcd_backlight = case brigtness
     when :bright
       1023
     when :dim 
@@ -97,7 +92,7 @@ class MyDenon < Denon
   
   def on_network_button(button)
     super
-    @lcd.touch
+    @common.lcd_touch
     case button
     when :next
       mpd :next      
@@ -121,8 +116,9 @@ class MyDenon < Denon
       tty_send "\t"
     when :play_pause
       mpd_pause
-    when :play
-      mpd :play
+    when :play # for alarm clock
+      disable_airplay
+      enable_music      
     when :stop
       mpd :stop
     when :repeat
@@ -152,9 +148,7 @@ class MyDenon < Denon
     when :clear
       tty_send "c"
     when :info
-      EM.defer { system("sudo toggle_display") }
-    when :program
-      EM.defer { system("loadalbum; sudo sync; sudo hdparm -y /dev/sda") }
+      EM.system("toggle_display")
     end
   end
   
@@ -186,9 +180,7 @@ class MyDenon < Denon
   def on_digital_button(button)
     super
     def mediakey(id)
-      EM.defer do
-        system "ssh -n mormegil mediakey #{id.to_s}"
-      end
+      EM.system "ssh -n mormegil mediakey #{id.to_s}"
     end  
     
     case button
@@ -243,6 +235,6 @@ class MyDenon < Denon
     disable_music
     disable_airplay
     stop_cd
-    @lcd.backlight = 0
+    @common.lcd_backlight = 0
   end
 end

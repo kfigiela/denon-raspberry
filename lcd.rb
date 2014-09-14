@@ -20,13 +20,20 @@ end
 
 
 class LCD  
-  def initialize
+  def initialize(common)
     # @lcd = I2C_HD44780.new
     # setup_udc
+    @common = common
     HD44780.init
     @counter = 0
     EM.add_periodic_timer(1) { refresh_screen; @counter += 1 }
     @line1 = @line2 = [""]
+    @status = "Hello!"
+    
+    @common.events.mpd_status.subscribe { update_screen }
+    @common.events.lcd_backlight.subscribe { |brightness| if brightness.nil? then touch else self.backlight = brightness end}
+    @common.events.lcd_status.subscribe { |text| @status = text; update_screen }
+    update_screen
   end
   
   def setup_udc
@@ -52,46 +59,6 @@ class LCD
     HD44780.puts msg.ljust(16), 0
   end
 
-  def display_screen(id, msg)
-#     send_data <<-EOM
-# screen_add #{id}
-# screen_set #{id} -cursor off -heartbeat off -backlight on -priority foreground
-# widget_add #{id} txt scroller
-# widget_set #{id} txt 1 1 16 2 h 6 "#{msg}"
-# EOM
-  end
-
-  def remove_screen(id)
-    # send_command "screen_del #{id}"
-  end
-
-  
-
-  def status_screen(song, status)
-    # if song.nil?
-#       remove_screen "mpd"
-#     else
-#       #touch
-#       puts "song changed to #{song.artist} - #{song.title}"
-#       status_line = "%s %s%s %11s" % [
-#         {play: ">", pause: "|", stop: "S"}[status[:state]],
-#         if status[:repeat] then "R" else " " end,
-#         if status[:random] then "Z" else " " end,
-#         "#{status[:song]+1}/#{status[:playlistlength]}"
-#       ]
-#       title_line = I18n.transliterate((song.title or File.basename(song.file, ".*"))).center(16)
-#
-#       send_data <<-EOM
-# screen_add mpd
-# screen_set mpd -timeout 80 -cursor off -heartbeat off -backlight on -priority alert
-# widget_add mpd txt string
-# widget_set mpd txt 1 1 "#{status_line}"
-# widget_add mpd txt2 string
-# widget_set mpd txt2 1 2 "#{title_line}"
-# EOM
-#    end
-  end
-
   def puts string, line
     HD44780.puts string, line
   end
@@ -100,19 +67,16 @@ class LCD
     HD44780.puts string, line
   end
   
-  def song_screen(song, status)
-    @song = song
-    @status = status
-    update_screen
-  end
-  
+
   def update_screen
-    return unless @status and @song
-    status = @status
-    song = @song
+    status = @common.mpd_status
+    song = @common.mpd_song
+
+    return unless status and song
+
     if status[:state] == :stop or status[:state] == :pause or song.nil?
       # EM.defer do
-        @line1 = ["\1               "]
+        @line1 = ["\1 #{@status.rjust 14}"]
         @line2 = [Time.now.strftime("%H:%M:%S").ljust(16)]
       # end
     else   
@@ -130,7 +94,7 @@ class LCD
   end
 
   def refresh_screen
-    if @status[:state] == :stop or @status[:state] == :pause or @song.nil?
+    if @common.mpd_status[:state] == :stop or @common.mpd_status[:state] == :pause or @common.mpd_song.nil?
       @line2 = [Time.now.strftime("%H:%M:%S").ljust(16)]
     end
     
