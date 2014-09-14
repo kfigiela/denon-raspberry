@@ -32,9 +32,17 @@ EventMachine.run do
   mpd.async_idle
     
   sp = SerialPort.open("/dev/ttyAMA0", 115200, 8, 1, SerialPort::NONE)
-  lcd = EventMachine.connect '127.0.0.1', 13666, LCD
+  lcd = LCD.new
   ui = WebSocketUI.new(mpd)
   denon = EventMachine.attach sp, MyDenon, mpd, lcd, ui
   EventMachine.connect '127.0.0.1', 6600, MPDIdle, mpd, lcd, denon, ui
-  EventMachine.open_keyboard(KeyboardHandler, denon)
+#  EventMachine.open_keyboard(KeyboardHandler, denon)
+  Signal.trap("INT")  { 
+    lcd.puts_sync "SIGINT             ", 1
+    EventMachine.stop
+  }
+  Signal.trap("TERM") { 
+    lcd.puts_sync "SIGTERM             ", 1    
+    EventMachine.stop 
+  }
 end
