@@ -1,1 +1,4 @@
 status.bin
+*.o
+*.so
+hd44780/Makefile

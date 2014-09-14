@@ -39,8 +39,10 @@ class MPDIdle < EM::Connection
     if data =~ /changed: (.*)\n/
       case $1
       when 'options'
+        @denon.preload_playlist unless @denon.playlist        
         @mpd.noidle do |mpd|
-          song = mpd.current_song
+          # song = mpd.current_song
+          song = @denon.playlist[status[:song]]
           status = mpd.status
           
           @lcd.status_screen(song,status)
@@ -49,13 +51,14 @@ class MPDIdle < EM::Connection
       when 'player'
         @denon.preload_playlist unless @denon.playlist
         @mpd.noidle do |mpd|
-          song = mpd.current_song
+          # song = mpd.current_song
           status = mpd.status
           if status.is_a? Hash
+            song = @denon.playlist[status[:song]]
+            @lcd.song_screen(song,status)
             preload(song, status)
             @denon.mpd_status(song, status)
-            @lcd.song_screen(song,status)
-            @lcd.status_screen(song,status)
+            # @lcd.status_screen(song,status)
             @ui.on_mpd(song, status)
           else
             p status
