@@ -51,7 +51,7 @@ class WebSocketUI
       ws.onmessage { |msg|        
         puts "Recieved message: #{msg}"
         case msg
-        when /ir:(.*)$/
+        when /^ir:(.*)$/
           ir_send "Denon_RC-1163", $1
         when /cd_ir:(.*)$/
           ir_send "AVR10", $1
