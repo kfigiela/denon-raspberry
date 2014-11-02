@@ -1,6 +1,5 @@
 #!/usr/bin/env ruby
 
-
 require 'bundler/setup' 
 
 require 'eventmachine'
@@ -38,6 +37,6 @@ EventMachine.run do
     EventMachine.stop 
   end
   Signal.trap("USR1") do
-    p @denon.status
+    pp denon.status
   end
 end

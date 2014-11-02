@@ -9,7 +9,7 @@ end
 
 module MyOperations
   def tty_send(key)
-    File.open('/dev/tty1','w') do |tty|
+    File.open('/dev/tty2','w') do |tty|
       key.chars { |char| tty.ioctl(TIOCSTI, char) }
     end
   end
@@ -22,7 +22,7 @@ module MyOperations
 
   def disable_airplay
     EM.system "systemctl stop shairplay"
-    @common.lcd_status ""
+    @common.lcd_status "X"
     @common.lcd_touch
   end
 
@@ -35,7 +35,7 @@ module MyOperations
   end
 
   def disable_music
-    @common.lcd_status ""      
+    @common.lcd_status "X"      
     @common.mpd.noidle do |mpd|
       mpd.disableoutput 0
     end

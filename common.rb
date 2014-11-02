@@ -48,7 +48,11 @@ class Common
   end
   
   def mpd_song
-    @playlist[@mpd_status[:song]]    
+    if @mpd_status[:song]
+      @playlist[@mpd_status[:song]]
+    else
+      nil
+    end
   end
   
   def lcd_backlight=(value)

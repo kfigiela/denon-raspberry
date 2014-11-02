@@ -15,7 +15,15 @@ def word_wrap2(text, col_width=16)
    text.gsub!( /(\S{#{col_width}})(?=\S)/, '\1 ' )
    text.gsub!( /(.{1,#{col_width}})(?:\s+|$)/, "\\1\n" )
    tmp = text.strip.split("\n")
-   tmp.map {|l| l.center(col_width)}
+   if tmp.length == 0
+     ["-".center(16)]    
+   elsif tmp.length == 1     
+     tmp.map {|l| l.center(col_width)}
+   elsif tmp.length == 2
+     [tmp[0].ljust(col_width), tmp[-1].rjust(col_width)]
+   else 
+     [tmp[0].ljust(col_width)] + tmp[1...-1].map { |l| l.center(col_width) } + [tmp[-1].rjust(col_width)]
+   end
 end
 
 
@@ -42,6 +50,7 @@ class LCD
   end
   
   def backlight=(brightness)
+    @backlight_timer.cancel if @backlight_timer    
     HD44780.backlight = (brightness > 0)
   end
 
@@ -72,22 +81,14 @@ class LCD
     status = @common.mpd_status
     song = @common.mpd_song
 
-    return unless status and song
-
     if status[:state] == :stop or status[:state] == :pause or song.nil?
-      # EM.defer do
         @line1 = ["\1 #{@status.rjust 14}"]
         @line2 = [Time.now.strftime("%H:%M:%S").ljust(16)]
-      # end
     else   
-      #touch   
       artist = word_wrap2 (I18n.transliterate (song.artist or ''))
-      # title = (I18n.transliterate (song.title or File.basename(song.file, ".*"))).center(16)
-      title = word_wrap2(I18n.transliterate (song.title or File.basename(song.file, ".*")))
-      # EM.defer do
+      title = word_wrap2 (I18n.transliterate (song.title or File.basename(song.file, ".*")))
       @line1 = artist
       @line2 = title
-      # end    
     end
     @counter = 0
     refresh_screen
@@ -97,7 +98,7 @@ class LCD
     if @common.mpd_status[:state] == :stop or @common.mpd_status[:state] == :pause or @common.mpd_song.nil?
       @line2 = [Time.now.strftime("%H:%M:%S").ljust(16)]
     end
-    
+
     HD44780.puts @line1[(@counter/2) % @line1.length].ljust(16), 0
     HD44780.puts @line2[(@counter/2) % @line2.length].ljust(16), 1
   end
