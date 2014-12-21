@@ -20,7 +20,7 @@ class MPDIdle < EM::Connection
       when 'options'
         @common.mpd.noidle do |mpd|
           status = mpd.status
-          @common.common.events.mpd_status.push status
+          @common.events.mpd_status.push status
         end
       when 'player'
         @common.mpd.noidle do |mpd|

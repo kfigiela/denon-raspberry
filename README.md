@@ -21,7 +21,7 @@ Also, thread at Raspberry Pi forum: http://www.raspberrypi.org/forums/viewtopic.
 
 * `denon.rb` – Denon protocol parser
 * `my_denon.rb` – logic of DRA-F109 integration in my setup
-* `lcd.rb` – logic for lcdproc screen
+* `lcd.rb` – logic for driving lcd
 * `mpd.rb` – monkeypatch `ruby-mpd` to add idle support
 * `mpd_idle.rb` – MPD idle with EventMachine for LCD updates and preloading audio files to memory
 
