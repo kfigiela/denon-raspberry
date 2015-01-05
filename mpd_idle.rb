@@ -28,10 +28,15 @@ class MPDIdle < EM::Connection
           if status.is_a? Hash
             @common.events.mpd_status.push status
           else
+            puts "bad status"
             p status
           end
         end
       when 'playlist'
+        @common.mpd.noidle do |mpd|
+          status = mpd.status
+          @common.events.mpd_status.push status
+        end
         @common.events.mpd_playlist.push nil
       end
     end

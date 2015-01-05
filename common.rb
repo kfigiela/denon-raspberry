@@ -11,16 +11,17 @@ class Common
   attr_reader :mpd, :lirc
   
   def initialize
-    @events = Struct.new(:mpd_song, :mpd_status, :mpd_playlist, :denon_status, :lcd_backlight, :lcd_status, :lcd_alerts).new
+    @events = Struct.new(:mpd_song, :mpd_status, :mpd_playlist, :denon_status, :lcd_backlight, :lcd_status, :lcd_alerts, :actions).new
     @events.mpd_status    = EM::Channel.new
     @events.mpd_playlist  = EM::Channel.new
     @events.denon_status  = EM::Channel.new
     @events.lcd_backlight = EM::Channel.new
     @events.lcd_status    = EM::Channel.new
     @events.lcd_alerts    = EM::Channel.new
+    @events.actions       = EM::Channel.new
 
     
-    @events.mpd_status.subscribe { |status| @mpd_status = status }    
+    @events.mpd_status.subscribe { |status| @mpd_status = status }
     @events.mpd_playlist.subscribe { update_playlist }
     
     @mpd = MPD.new

@@ -38,11 +38,23 @@ class LCD
     EM.add_periodic_timer(1) { refresh_screen; @counter += 1 }
     @line1 = @line2 = [""]
     @status = "MPD"
+
+    @mode = 0
+    @total_modes = 2
     
-    @common.events.mpd_status.subscribe { check_mpd_alerts; update_screen }
+    @common.events.mpd_status.subscribe { check_mpd_alerts; update_screen; }
     @common.events.lcd_backlight.subscribe { |brightness| if brightness.nil? then touch else self.backlight = brightness end}
     @common.events.lcd_status.subscribe { |text| @status = text; update_screen }
     @common.events.lcd_alerts.subscribe { |line1, line2| display_alert(line1, line2) }
+    @common.events.actions.subscribe do |action|
+      case action
+      when :info
+        @mode = (@mode + 1) % @total_modes
+        Kernel.puts "Display mode #{@mode}"
+        update_screen
+      end
+    end
+    
     update_screen
   end
   
@@ -106,11 +118,17 @@ class LCD
     elsif status[:state] == :stop or status[:state] == :pause or song.nil?
         @line1 = ["\1 #{@status.rjust 14}"]
         @line2 = [Time.now.strftime("%H:%M:%S").ljust(16)]
-    else   
-      artist = word_wrap2 (I18n.transliterate (song.artist or ''))
-      title = word_wrap2 (I18n.transliterate (song.title or File.basename(song.file, ".*")))
-      @line1 = artist
-      @line2 = title
+    else
+      case @mode
+      when 0
+        artist = word_wrap2 (I18n.transliterate (song.artist or ''))
+        title = word_wrap2 (I18n.transliterate (song.title or File.basename(song.file, ".*")))
+        @line1 = artist
+        @line2 = title
+      when 1
+        @line1 = ["#{song.length.rjust(6)} " + "#{status[:song]+1}/#{status[:playlistlength]}".rjust(10)]
+        @line2 = word_wrap2 (I18n.transliterate (song.title or File.basename(song.file, ".*")))
+      end
     end
     @counter = 0
     refresh_screen

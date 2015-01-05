@@ -25,7 +25,7 @@ EventMachine.run do
   mpd_idle = EventMachine.connect '127.0.0.1', 6600, MPDIdle, common
   preload  = Preload.new common
 
-  common.events.mpd_status.subscribe { puts "MPD Status: #{common.mpd_status}" }
+  # common.events.mpd_status.subscribe { puts "MPD Status: #{common.mpd_status}" }
   # common.events.denon_status.subscribe { |status| puts "Denon Status: #{status}" }
 
   Signal.trap("INT")  do 

@@ -146,8 +146,12 @@ class MyDenon < Denon
     when :num0
       load_playlist_by_index 9
     when :clear
-      tty_send "c"
+      @common.mpd.noidle do |mpd|
+        mpd.clear
+      end
     when :info
+      @common.events.actions.push :info
+    when :num10
       @common.events.lcd_alerts.push ["Toggling display...", ""]
       EM.system("toggle_display")
     end
@@ -224,11 +228,11 @@ class MyDenon < Denon
       disable_airplay
     end
     
-    # if source == :cd
-    #   nil
-    # else
-    #   stop_cd
-    # end
+    if (source == :cd or source == :analog1)
+      nil
+    else
+      stop_cd
+    end
   end
   
   def on_amp_off
