@@ -26,6 +26,8 @@ class Denon < EventMachine::Connection
   Audio = Struct.new(:volume, :mute, :bass, :treble, :balance, :sdb, :sdirect)
   Alarms = Struct.new(:once, :every)
   
+  DAB_FREQS = {"5A" => 174.928, "5B" => 176.640, "5C" => 178.352, "5D" => 180.064, "6A" => 181.936, "6B" => 183.648, "6C" => 185.360, "6D" => 187.072, "7A" => 188.928, "7B" => 190.640, "7C" => 192.352, "7D" => 194.064, "8A" => 195.936, "8B" => 197.648, "8C" => 199.360, "8D" => 201.072, "9A" => 202.928, "9B" => 204.640, "9C" => 206.352, "9D" => 208.064, "10A" => 209.936, "10B" => 211.648, "10C" => 213.360, "10D" => 215.072, "10N" => 210.096, "11A" => 216.928, "11B" => 218.640, "11C" => 220.352, "11D" => 222.064, "11N" => 217.088, "12A" => 223.936, "12B" => 225.648, "12C" => 227.360, "12D" => 229.072, "12N" => 224.096, "13A" => 230.784, "13B" => 232.496, "13C" => 234.208, "13D" => 235.776, "13E" => 237.488, "13F" => 239.200}
+  
   def initialize
     @status = Status.new
   end
@@ -42,12 +44,20 @@ class Denon < EventMachine::Connection
       have_packet = false
       if start = @buffer.index("\x00\xff\x55".force_encoding("ASCII-8BIT")) and (@buffer.length > start + 3)
         payload_length = 2 + @buffer.unpack('C*')[start+3]
-        packet_length = 3 + 3 + payload_length
-        if @buffer.length > start+packet_length
-          #puts "Have full packet of #{packet_length} bytes, payload #{payload_length}"
-          packet = @buffer[start+6...(start+packet_length)]
-          # display_buffer packet
-          got_packet packet
+        packet_length = 3 + 3 + payload_length + 1
+        if @buffer.length >= start+packet_length
+          # puts "Have full packet of #{packet_length} bytes, payload #{payload_length}"
+          packet = @buffer[start...(start+packet_length)]
+          
+          bytes = packet.unpack("C*")
+          checksum = bytes[0...-1].reduce(&:+) & 0xff
+          
+          if checksum == bytes[-1]
+            got_packet packet[6...-1] # packet without header and checksum
+          else
+            puts "Invalid checksum #{bytes[-1]} expected #{checksum}"
+            display_buffer packet
+          end
           @buffer = (@buffer[start+packet_length+1..-1] or "".force_encoding("ASCII-8BIT"))
           have_packet = true
         end
@@ -175,10 +185,10 @@ class Denon < EventMachine::Connection
   def got_packet(data)
 
     # begin
-    #   bytes = data.unpack("C*")
-    #   puts "Packet " +  ("%-40s" % bytes.map{|b|"%02x " % [b]}.join) + bytes.map{|b| b.chr}.join.scan(/[[:print:]]/).join
+    #  bytes = data.unpack("C*")
+    #  puts "Packet " +  ("%-40s" % bytes.map{|b|"%02x " % [b]}.join) + bytes.map{|b| b.chr}.join.scan(/[[:print:]]/).join
     # end
-
+    
     if @network_buttons.include? data
       on_network_button @network_buttons[data]
     elsif @cd_buttons.include? data
@@ -276,23 +286,30 @@ class Denon < EventMachine::Connection
         when "SIDIGITAL_IN"
           on_source :digital
           
-        when "TMANFM" # Tuner tuned
+        when "TMANFM"
           @status.radio.band = :fm
           on_radio :band
+        when "TMDA"
+          @status.radio.band = :dab
+          on_radio :band
+          
         when "TMANMANUAL"
           @status.radio.stereo = :mono
           on_radio :stereo
         when "TMANAUTO"
           @status.radio.stereo = :auto
           on_radio :stereo
-        when /TPAN(\d\d)/ # Tuner tuned
+        when /TPAN(\d\d)/
           @status.radio.current_preset = $1.to_i
           on_radio :tune_preset
         when "TPANOFF" 
           @status.radio.current_preset = nil
           on_radio :tune_preset
-        when /TFAN(\d{6})/ # Tuner tuned
+        when /TFAN(\d{6})/
           @status.radio.current_frequency = $1.to_i/100.0
+          on_radio :tune_frequency
+        when /TFDA(\d{1,2}[A-Z])/
+          @status.radio.current_frequency = DAB_FREQS[$1]
           on_radio :tune_frequency
         when /SSTPN(\d\d)(.{9})(\d{8})/ 
           index = $1.to_i
