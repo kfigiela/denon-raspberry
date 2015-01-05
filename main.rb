@@ -29,11 +29,13 @@ EventMachine.run do
   # common.events.denon_status.subscribe { |status| puts "Denon Status: #{status}" }
 
   Signal.trap("INT")  do 
-    lcd.puts_sync "SIGINT             ", 1
+    lcd.puts_sync "Goodbye!          ", 0
+    lcd.puts_sync "                 I", 1
     EventMachine.stop
   end
   Signal.trap("TERM") do
-    lcd.puts_sync "SIGTERM             ", 1    
+    lcd.puts_sync "Goodbye!          ", 0
+    lcd.puts_sync "                 T", 1
     EventMachine.stop 
   end
   Signal.trap("USR1") do
