@@ -148,6 +148,7 @@ class MyDenon < Denon
     when :clear
       tty_send "c"
     when :info
+      @common.events.lcd_alerts.push ["Toggling display...", ""]
       EM.system("toggle_display")
     end
   end

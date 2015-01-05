@@ -30,23 +30,25 @@ end
 class LCD  
   def initialize(common)
     # @lcd = I2C_HD44780.new
-    # setup_udc
+    setup_udc
     @common = common
+    @prev_mpd_status = @common.mpd_status
     HD44780.init
     @counter = 0
     EM.add_periodic_timer(1) { refresh_screen; @counter += 1 }
     @line1 = @line2 = [""]
-    @status = "Hello!"
+    @status = "MPD"
     
-    @common.events.mpd_status.subscribe { update_screen }
+    @common.events.mpd_status.subscribe { check_mpd_alerts; update_screen }
     @common.events.lcd_backlight.subscribe { |brightness| if brightness.nil? then touch else self.backlight = brightness end}
     @common.events.lcd_status.subscribe { |text| @status = text; update_screen }
+    @common.events.lcd_alerts.subscribe { |line1, line2| display_alert(line1, line2) }
     update_screen
   end
   
   def setup_udc
-    @lcd.set_udc 0, [0x18, 0x14, 0x12, 0x11, 0x12, 0x14, 0x18, 0x00] # play
-    @lcd.set_udc 1, [0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x00] # pause
+    HD44780.set_udc 0, [0x18, 0x14, 0x12, 0x11, 0x12, 0x14, 0x18, 0x00] # play
+    HD44780.set_udc 1, [0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x00] # pause
   end
   
   def backlight=(brightness)
@@ -60,12 +62,20 @@ class LCD
       @backlight_timer.cancel if @backlight_timer
       @backlight_timer = EventMachine::Timer.new 10 do
         HD44780.backlight = false
+        @backlight_timer = nil
       end
     end
   end
   
-  def display_alert(msg)
-    HD44780.puts msg.ljust(16), 0
+  def display_alert(line1, line2 = "")
+    @alert_timer.cancel if @alert_timer    
+    @alert_timer = EventMachine::Timer.new 4 do
+      @alert_timer = nil
+      update_screen
+    end
+    @line1 = [(I18n.transliterate line1.to_s)]
+    @line2 = [(I18n.transliterate line2.to_s)]
+    update_screen
   end
 
   def puts string, line
@@ -77,11 +87,23 @@ class LCD
   end
   
 
+  def check_mpd_alerts
+    if @common.mpd_status[:random] != @prev_mpd_status[:random]
+      display_alert("Random #{if @common.mpd_status[:random] then "On" else "Off" end}")
+    end
+    if @common.mpd_status[:repeat] != @prev_mpd_status[:repeat]
+      display_alert("Repeat #{if @common.mpd_status[:repeat] then "On" else "Off" end}")
+    end
+    @prev_mpd_status = @common.mpd_status
+  end
+
   def update_screen
     status = @common.mpd_status
     song = @common.mpd_song
 
-    if status[:state] == :stop or status[:state] == :pause or song.nil?
+    if @alert_timer
+      # do nothing
+    elsif status[:state] == :stop or status[:state] == :pause or song.nil?
         @line1 = ["\1 #{@status.rjust 14}"]
         @line2 = [Time.now.strftime("%H:%M:%S").ljust(16)]
     else   
@@ -95,10 +117,10 @@ class LCD
   end
 
   def refresh_screen
-    if @common.mpd_status[:state] == :stop or @common.mpd_status[:state] == :pause or @common.mpd_song.nil?
+    if (@common.mpd_status[:state] == :stop or @common.mpd_status[:state] == :pause or @common.mpd_song.nil?) and @alert_timer.nil?
       @line2 = [Time.now.strftime("%H:%M:%S").ljust(16)]
     end
-
+    
     HD44780.puts @line1[(@counter/2) % @line1.length].ljust(16), 0
     HD44780.puts @line2[(@counter/2) % @line2.length].ljust(16), 1
   end
