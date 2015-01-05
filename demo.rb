@@ -95,7 +95,7 @@ class KeyboardHandler < EM::Connection # this is for demo only
 end
 
 EventMachine.run do
-  sp = SerialPort.open("/dev/ttyAMA0", 115200, 8, 1, SerialPort::NONE)
+  sp = SerialPort.open("/dev/ttyUSB0", 115200, 8, 1, SerialPort::NONE)
   denon = EventMachine.attach sp, DemoDenon
   EventMachine.open_keyboard KeyboardHandler, denon
   puts "Press enter to see receiver status"

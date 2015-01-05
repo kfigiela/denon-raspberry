@@ -18,7 +18,7 @@ I18n.enforce_available_locales = false
 EventMachine.run do
   common = Common.new
   
-  sp       = SerialPort.open("/dev/ttyAMA0", 115200, 8, 1, SerialPort::NONE)
+  sp       = SerialPort.open("/dev/ttyUSB0", 115200, 8, 1, SerialPort::NONE)
   lcd      = LCD.new common
   webui    = WebSocketUI.new common
   denon    = EventMachine.attach sp, MyDenon, common
@@ -26,7 +26,7 @@ EventMachine.run do
   preload  = Preload.new common
 
   common.events.mpd_status.subscribe { puts "MPD Status: #{common.mpd_status}" }
-  common.events.denon_status.subscribe { |status| puts "Denon Status: #{status}" }
+  # common.events.denon_status.subscribe { |status| puts "Denon Status: #{status}" }
 
   Signal.trap("INT")  do 
     lcd.puts_sync "SIGINT             ", 1
