@@ -129,25 +129,32 @@ void set_backlight(bool value) {
   write_command(0x80);
 }
 
-void print(char * str, int line) {
+
+
+void print2(char * str, size_t len, int line) {
 	int i;
 	static const int addr[] = {0x80, 0xC0, 0x94, 0xD4};
 	write_command(addr[line]);
-	for(i = 0; i < 16 && *str; ++i, *str++) {
+	for(i = 0; i < 16 && i < len; ++i, *str++) {
 		write_data(*str);
 	}
 }
 
-VALUE rb_print(VALUE self, VALUE str, VALUE line) {
-	Check_Type(line, T_FIXNUM);
-	print(StringValueCStr(str), FIX2INT(line));
+void print(char * str, int line) {
+	print2(str, strlen(str), line);
 }
 
 VALUE rb_init(VALUE self) {
 	init();
 	init();
-	print("Hello world!",0);
+	print("Hello!",0);
 	return Qnil;
+}
+
+VALUE rb_print(VALUE self, VALUE str, VALUE line) {
+	Check_Type(line, T_FIXNUM);
+	StringValue(str);
+	print2(RSTRING_PTR(str), RSTRING_LEN(str), FIX2INT(line));
 }
 
 VALUE rb_backlight_get(VALUE self) {
@@ -159,38 +166,26 @@ VALUE rb_backlight_set(VALUE self, VALUE val) {
 	return rb_backlight_get(self);
 }
 
+VALUE rb_set_udc(VALUE self, VALUE idx, VALUE val) {
+	size_t i;
+	VALUE ary = rb_ary_to_ary(val);
+	Check_Type(idx, T_FIXNUM);
+	
+	write_command(0x40 + ((FIX2INT(index) & 0x07) << 3));
+	for(i = 0; i < 8; ++i) {
+		VALUE el = rb_ary_entry(ary, i);
+		Check_Type(el, T_FIXNUM);
+		write_data(FIX2INT(el));
+	}
+	return Qnil;
+}
+
 void Init_hd44780() {
   VALUE HD44780 = rb_define_module("HD44780");
 	fd = wiringPiI2CSetup(I2C_ADDRESS);	
   rb_define_singleton_method(HD44780, "init", rb_init, 0);
   rb_define_singleton_method(HD44780, "puts", rb_print, 2);
+  rb_define_singleton_method(HD44780, "set_udc", rb_set_udc, 2);
   rb_define_singleton_method(HD44780, "backlight=", rb_backlight_set, 1);
   rb_define_singleton_method(HD44780, "backlight", rb_backlight_get, 0);
 }
-
-
-//
-//
-//
-// int main(int argc, char** argv) {
-// 	init();
-// 	sleep(1);
-// 	print("Hello world@@",0);
-// 	print("Hello world!!",1);
-// 	sleep(5);
-// 	int i=0;
-// 	int start = time(NULL);
-// 	while(true) {
-//   time_t rawtime;
-//    struct tm * timeinfo;
-//    char buffer [80];
-//
-//    time (&rawtime);
-//    timeinfo = localtime (&rawtime);
-//
-//    strftime (buffer,80,"        %H:%M:%S",timeinfo);
-//    print(buffer, 0);
-// 	 sprintf(buffer,"%8d%8d", time(NULL)-start, i++);
-// 	    print(buffer, 1);
-//  }
-// }
