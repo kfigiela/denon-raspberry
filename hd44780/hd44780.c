@@ -170,6 +170,11 @@ VALUE rb_set_udc(VALUE self, VALUE idx, VALUE val) {
 	size_t i;
 	VALUE ary = rb_ary_to_ary(val);
 	Check_Type(idx, T_FIXNUM);
+	if(RARRAY_LEN(val) != 8) {
+	  rb_raise(rb_eArgError, "Need to provide array of 8 FixNums");
+		return Qnil;
+	}
+		
 	write_command(0x40 + ((FIX2INT(idx) & 0x07) << 3));
 	for(i = 0; i < 8; ++i) {
 		VALUE el = rb_ary_entry(ary, i);
