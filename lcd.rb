@@ -100,12 +100,12 @@ class LCD
   
 
   def check_mpd_alerts
-    if @common.mpd_status[:random] != @prev_mpd_status[:random]
-      display_alert("Random #{if @common.mpd_status[:random] then "On" else "Off" end}")
-    end
-    if @common.mpd_status[:repeat] != @prev_mpd_status[:repeat]
-      display_alert("Repeat #{if @common.mpd_status[:repeat] then "On" else "Off" end}")
-    end
+    # if @common.mpd_status[:random] != @prev_mpd_status[:random]
+    #   display_alert("Random #{if @common.mpd_status[:random] then "On" else "Off" end}")
+    # end
+    # if @common.mpd_status[:repeat] != @prev_mpd_status[:repeat]
+    #   display_alert("Repeat #{if @common.mpd_status[:repeat] then "On" else "Off" end}")
+    # end
     @prev_mpd_status = @common.mpd_status
   end
 
@@ -121,12 +121,12 @@ class LCD
     else
       case @mode
       when 0
-        artist = word_wrap2 (I18n.transliterate (song.artist or ''))
+        artist = word_wrap2 (I18n.transliterate (song.artist or song.name or ""))
         title = word_wrap2 (I18n.transliterate (song.title or File.basename(song.file, ".*")))
         @line1 = artist
         @line2 = title
       when 1
-        @line1 = ["#{song.length.rjust(6)} " + "#{status[:song]+1}/#{status[:playlistlength]}".rjust(10)]
+        @line1 = ["#{song.length.rjust(6)} " + "#{status[:song]+1}/#{status[:playlistlength]}".rjust(9)]
         @line2 = word_wrap2 (I18n.transliterate (song.title or File.basename(song.file, ".*")))
       end
     end

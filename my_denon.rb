@@ -16,18 +16,15 @@ module MyOperations
 
   def enable_airplay
     EM.system "systemctl start shairplay"
-    @common.lcd_status "AirPlay"
     @common.lcd_touch
   end
 
   def disable_airplay
     EM.system "systemctl stop shairplay"
-    @common.lcd_status "X"
     @common.lcd_touch
   end
 
   def enable_music
-    @common.lcd_status "MPD"      
     @common.mpd.noidle do |mpd|
       mpd.enableoutput 0
       mpd.play
@@ -35,8 +32,10 @@ module MyOperations
   end
 
   def disable_music
-    @common.lcd_status "X"      
     @common.mpd.noidle do |mpd|
+      if mpd.current_song.time.nil? # for radio streams
+        mpd.stop
+      end
       mpd.disableoutput 0
     end
   end
@@ -56,6 +55,7 @@ class MyDenon < Denon
   
   def initialize(common)    
     @common = common
+    @mode = :music
     
     @status = if File.exists?('status.bin')
       begin
@@ -89,6 +89,19 @@ class MyDenon < Denon
       0
     end
   end  
+  
+  def on_number_key(num)
+    num = (if num == 0 then 10 else num end) - 1
+
+    case @mode
+    when :music
+      load_playlist_by_index num
+    when :radio
+      @common.mpd.noidle do |mpd|
+        mpd.play(num)
+      end
+    end
+  end
   
   def on_network_button(button)
     super
@@ -126,25 +139,25 @@ class MyDenon < Denon
     when :random
       mpd_toggle :random
     when :num1
-      load_playlist_by_index 0
+      on_number_key 1
     when :num2
-      load_playlist_by_index 1
+      on_number_key 2
     when :num3
-      load_playlist_by_index 2
+      on_number_key 3
     when :num4
-      load_playlist_by_index 3
+      on_number_key 4
     when :num5
-      load_playlist_by_index 4
+      on_number_key 5
     when :num6
-      load_playlist_by_index 5
+      on_number_key 6
     when :num7
-      load_playlist_by_index 6
+      on_number_key 7
     when :num8
-      load_playlist_by_index 7
+      on_number_key 8
     when :num9
-      load_playlist_by_index 8
+      on_number_key 9
     when :num0
-      load_playlist_by_index 9
+      on_number_key 0
     when :clear
       @common.mpd.noidle do |mpd|
         mpd.clear
@@ -206,26 +219,86 @@ class MyDenon < Denon
     on_cd_button(button)
   end
 
+  def change_mode(mode)
+    old_mode = @mode
+    @mode = mode
+    puts "#{old_mode} -> #{mode}"
+    
+    return if old_mode == mode
+
+    if old_mode == :airplay
+      disable_airplay
+    end
+
+    if (mode != :music and mode != :radio) and (old_mode == :music or old_mode == :radio)
+      disable_music
+    end
+    
+    if old_mode == :music
+      @common.mpd.noidle do |mpd|
+        mpd.playlists.find { |p| p.name == ".musicplaylist" }.destroy
+        mpd.save ".musicplaylist"
+        @music_pos = mpd.current_song.pos
+      end
+    end
+
+    if old_mode == :radio      
+      @common.mpd.noidle do |mpd|
+        @radio_station = @common.mpd_status[:song]
+        mpd.clear
+        mpd.playlists.find { |p| p.name == ".musicplaylist" }.load
+        mpd.play(@music_pos)
+      end
+    end
+
+    case mode
+    when nil
+      nil
+    when :radio
+      enable_music
+      
+      mpd_toggle :repeat, true
+      mpd_toggle :single, true
+      
+      load_playlist "Radio", @radio_station
+    when :music
+      mpd_toggle :repeat, false
+      mpd_toggle :single, false
+      
+      enable_music
+    when :airplay
+      enable_airplay
+    end
+    
+    @common.lcd_status({nil => "---", radio: "Radio", music: "Music", airplay: "AirPlay"}[mode])
+  end
+
   def on_network_function(function)
     super
     case function
-    when :online_music, :internet_radio
-      disable_airplay
-      enable_music
+    when :internet_radio
+      change_mode :radio
+    when :online_music
+      change_mode :music
     when :music_server
-      disable_music
-      enable_airplay
+      change_mode :airplay
+    end
+  end
+  
+  def on_cd_function(function)
+    super
+    case function
+    when :cd
+      ir_send :AVR10, :CD_PLAY
     end
   end
   
   def on_source(source)
     super
     if source == :network
-      enable_music
-      mpd :play
+      change_mode (@mode or :music)
     else
-      disable_music
-      disable_airplay
+      change_mode nil
     end
     
     if (source == :cd or source == :analog1)
@@ -237,8 +310,7 @@ class MyDenon < Denon
   
   def on_amp_off
     super
-    disable_music
-    disable_airplay
+    change_mode :nil
     stop_cd
     @common.lcd_backlight = 0
   end

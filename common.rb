@@ -9,6 +9,8 @@ class Common
   
   # connections
   attr_reader :mpd, :lirc
+
+  attr_accessor :denon
   
   def initialize
     @events = Struct.new(:mpd_song, :mpd_status, :mpd_playlist, :denon_status, :lcd_backlight, :lcd_status, :lcd_alerts, :actions).new
@@ -21,8 +23,11 @@ class Common
     @events.actions       = EM::Channel.new
 
     
-    @events.mpd_status.subscribe { |status| @mpd_status = status }
-    @events.mpd_playlist.subscribe { update_playlist }
+    @events.mpd_status.subscribe do |status|
+      @mpd_status = status
+      update_playlist
+    end
+    # @events.mpd_playlist.subscribe { update_playlist }
     
     @mpd = MPD.new
     @mpd.connect
@@ -31,16 +36,21 @@ class Common
 
     @lirc = EventMachine.connect_unix_domain "/var/run/lirc/lircd", LIRCHandler, self
 
-    update_playlist
     update_status
+    update_playlist
     
   end
   
   def update_playlist
-    puts "Updating playlist"
-    @mpd.noidle_sync do |mpd|
-      @playlist = mpd.queue.to_a
-    end    
+    if @playlist_version != @mpd_status[:playlist]
+      start = Time.now   
+      puts "Updating playlist #{@playlist_version} -> #{@mpd_status[:playlist]}"
+      @mpd.noidle_sync do |mpd|
+        @playlist = mpd.queue.to_a
+      end    
+      @playlist_version = @mpd_status[:playlist]
+      puts "Pls updated. Took #{Time.now - start} s"
+    end
   end
   
   def update_status

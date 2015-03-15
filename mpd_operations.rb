@@ -2,10 +2,6 @@ require 'ruby-mpd'
 require 'benchmark'
 
 module MPDOperations
-  def playlist
-    @playlist
-  end
-  
   def load_playlist(name, pos = nil)
     @common.mpd.noidle do |mpd|
       mpd.clear
@@ -19,7 +15,7 @@ module MPDOperations
       mpd.stop
       mpd.clear
       playlists = mpd.playlists
-      playlists.sort_by! { |p| p.name }
+      playlists.reject! {|p| p.name =~ /^\./}.sort_by! { |p| p.name }
       if playlists[index]
         @common.events.lcd_alerts.push ["Playlist:", playlists[index].name]
         playlists[index].load
@@ -36,9 +32,10 @@ module MPDOperations
     end
   end
 
-  def mpd_toggle(action)
+  def mpd_toggle(action, val = nil)
     @common.mpd.noidle do |mpd|
-      mpd.send("#{action.to_s}=".to_sym, (not mpd.status[action.to_sym]))
+      val = (not mpd.status[action.to_sym]) if val.nil?
+      mpd.send("#{action.to_s}=".to_sym, val)
     end
   end
 
@@ -49,12 +46,6 @@ module MPDOperations
       else
         mpd.play
       end
-    end
-  end
-  
-  def preload_playlist
-    @common.mpd.noidle_sync do |mpd|
-      @playlist = mpd.queue.to_a
     end
   end
   

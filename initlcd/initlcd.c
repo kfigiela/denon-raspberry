@@ -144,4 +144,5 @@ int main(int argc, char** argv) {
   init();
   set_backlight(true);
   print("Please wait...",0);
+  printf("Done\n");
 }

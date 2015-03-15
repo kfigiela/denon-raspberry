@@ -44,21 +44,26 @@ class Denon < EventMachine::Connection
       have_packet = false
       if start = @buffer.index("\x00\xff\x55".force_encoding("ASCII-8BIT")) and (@buffer.length > start + 3)
         payload_length = 2 + @buffer.unpack('C*')[start+3]
-        packet_length = 3 + 3 + payload_length + 1
+        packet_length = 3 + 3 + payload_length
         if @buffer.length >= start+packet_length
           # puts "Have full packet of #{packet_length} bytes, payload #{payload_length}"
           packet = @buffer[start...(start+packet_length)]
           
           bytes = packet.unpack("C*")
-          checksum = bytes[0...-1].reduce(&:+) & 0xff
-          
-          if checksum == bytes[-1]
-            got_packet packet[6...-1] # packet without header and checksum
-          else
-            puts "Invalid checksum #{bytes[-1]} expected #{checksum}"
-            display_buffer packet
-          end
-          @buffer = (@buffer[start+packet_length+1..-1] or "".force_encoding("ASCII-8BIT"))
+          checksum = bytes[0..-1].reduce(&:+) & 0xff
+          puts "Junk: #{start}"
+          display_buffer @buffer[0...start]
+          puts "Packet checksum #{checksum.to_s(16)}"
+          #display_buffer @buffer[start...(start+packet_length)]
+
+          got_packet packet[6..-1]
+#          if checksum == bytes[-1]
+ #           got_packet packet[6...-1] # packet without header and checksum
+  #        else
+   #         puts "Invalid checksum #{bytes[-1]} expected #{checksum}"
+    #        display_buffer packet
+     #     end
+          @buffer = (@buffer[start+packet_length..-1] or "".force_encoding("ASCII-8BIT"))
           have_packet = true
         end
       end
@@ -67,7 +72,18 @@ class Denon < EventMachine::Connection
   
   def display_buffer(str)
     bytes = str.unpack("C*")
-    puts ("%-40s" % bytes.map{|b|"%02x " % [b]}.join) + bytes.map{|b| b.chr}.join.scan(/[[:print:]]/).join
+    puts ("%-40s" % bytes.map{|b|"%02x " % [b]}.join) + bytes.map{|b| b.chr}.join.scan(/[[:print:]]/).join.inspect
+  end
+  
+  def send_command(command)
+    packet = [0x00, 0xff, 0x55, command.length+1, 0x00, 0x00, 0x80, 0x00]
+    packet += command.bytes + [0x0d]
+    checksum = packet.reduce(&:+) & 0xff
+    packet << checksum
+    data = packet.pack("c*")
+    puts "Sending"
+    display_buffer data
+    send_data(data)
   end
 
   def on_status(what)
@@ -184,10 +200,10 @@ class Denon < EventMachine::Connection
   
   def got_packet(data)
 
-    # begin
-    #  bytes = data.unpack("C*")
-    #  puts "Packet " +  ("%-40s" % bytes.map{|b|"%02x " % [b]}.join) + bytes.map{|b| b.chr}.join.scan(/[[:print:]]/).join
-    # end
+    begin
+      bytes = data.unpack("C*")
+      puts "Packet " +  ("%-40s" % bytes.map{|b|"%02x " % [b]}.join) + bytes.map{|b| b.chr}.join.scan(/[[:print:]]/).join
+    end
     
     if @network_buttons.include? data
       on_network_button @network_buttons[data]
