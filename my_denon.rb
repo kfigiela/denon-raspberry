@@ -270,7 +270,7 @@ class MyDenon < Denon
       enable_airplay
     end
     
-    @common.lcd_status({nil => "---", radio: "Radio", music: "Music", airplay: "AirPlay"}[mode])
+    @common.lcd_status({radio: "Radio", music: "Music", airplay: "AirPlay"}[mode])
   end
 
   def on_network_function(function)
@@ -301,16 +301,14 @@ class MyDenon < Denon
       change_mode nil
     end
     
-    if (source == :cd or source == :analog1)
-      nil
-    else
+    unless (source == :cd or source == :analog1)
       stop_cd
     end
   end
   
   def on_amp_off
     super
-    change_mode :nil
+    change_mode nil
     stop_cd
     @common.lcd_backlight = 0
   end

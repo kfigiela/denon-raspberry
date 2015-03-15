@@ -42,7 +42,11 @@ module MPDOperations
   def mpd_pause
     @common.mpd.noidle do |mpd|
       if mpd.playing?
-        mpd.pause = 1
+        if mpd.current_song.time.nil? # for radio streams
+          mpd.stop
+        else
+          mpd.pause = 1
+        end
       else
         mpd.play
       end

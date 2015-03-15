@@ -37,7 +37,7 @@ class LCD
     @counter = 0
     EM.add_periodic_timer(1) { refresh_screen; @counter += 1 }
     @line1 = @line2 = [""]
-    @status = "MPD"
+    @status = nil
 
     @mode = 0
     @total_modes = 2
@@ -116,7 +116,7 @@ class LCD
     if @alert_timer
       # do nothing
     elsif status[:state] == :stop or status[:state] == :pause or song.nil?
-        @line1 = ["\1 #{@status.rjust 14}"]
+        @line1 = ["\1 #{(@status or "---").rjust 14}"]
         @line2 = [Time.now.strftime("%H:%M:%S").ljust(16)]
     else
       case @mode
