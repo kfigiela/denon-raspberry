@@ -170,8 +170,7 @@ VALUE rb_set_udc(VALUE self, VALUE idx, VALUE val) {
 	size_t i;
 	VALUE ary = rb_ary_to_ary(val);
 	Check_Type(idx, T_FIXNUM);
-	
-	write_command(0x40 + ((FIX2INT(index) & 0x07) << 3));
+	write_command(0x40 + ((FIX2INT(idx) & 0x07) << 3));
 	for(i = 0; i < 8; ++i) {
 		VALUE el = rb_ary_entry(ary, i);
 		Check_Type(el, T_FIXNUM);
