@@ -59,8 +59,8 @@ class LCD
   end
   
   def setup_udc
-    HD44780.set_udc 0, [0x18, 0x14, 0x12, 0x11, 0x12, 0x14, 0x18, 0x00] # play
-    HD44780.set_udc 1, [0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x00] # pause
+    # HD44780.set_udc 1, [0x18, 0x14, 0x12, 0x11, 0x12, 0x14, 0x18, 0x00] # play
+    HD44780.set_udc 0, [0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x00] # pause
   end
   
   def backlight=(brightness)
@@ -87,6 +87,7 @@ class LCD
     end
     @line1 = [(I18n.transliterate line1.to_s)]
     @line2 = [(I18n.transliterate line2.to_s)]
+    EM.system %Q{sudo -u kfigiela tmux display-message -c /dev/pts/1 "#{line1.to_s} #{line2.to_s}"}
     update_screen
   end
 
@@ -116,7 +117,7 @@ class LCD
     if @alert_timer
       # do nothing
     elsif status[:state] == :stop or status[:state] == :pause or song.nil?
-        @line1 = ["\1 #{(@status or "---").rjust 14}"]
+        @line1 = ["\0 #{(@status or "---").rjust 14}"]
         @line2 = [Time.now.strftime("%H:%M:%S").ljust(16)]
     else
       case @mode
