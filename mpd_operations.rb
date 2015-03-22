@@ -15,7 +15,7 @@ module MPDOperations
       mpd.stop
       mpd.clear
       playlists = mpd.playlists
-      playlists.reject! {|p| p.name =~ /^\./}.sort_by! { |p| p.name }
+      playlists.reject! {|p| p.name =~ /^\.|^Radio/}.sort_by! { |p| p.name }
       if playlists[index]
         @common.events.lcd_alerts.push ["Playlist:", playlists[index].name]
         playlists[index].load

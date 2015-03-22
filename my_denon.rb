@@ -53,27 +53,38 @@ class MyDenon < Denon
   include MPDOperations
   include MyOperations
   
+  class MyStatus < Struct.new(:amp, :mode, :last_mode)
+    def initialize
+      super
+      self.amp = ::Denon::Status.new
+      self.mode = :music
+      self.last_mode = :music
+    end
+  end
+  
   def initialize(common)    
     @common = common
-    @mode = :music
     
-    @status = if File.exists?('status.bin')
+    @my_status = if File.exists?('status.bin')
       begin
         File.open('status.bin') { |file| Marshal.load(file) } 
       rescue Exception => e
         puts "Failed reading state"
         puts e.message
-        Status.new
+        MyStatus.new
       end
     else
-        Status.new
-    end    
+        MyStatus.new
+    end
+
+    @status = @my_status.amp
+    
     on_status(:boot)
   end
 
   def on_status(what)
-    File.write('status.bin', Marshal.dump(@status))
-    @common.events.denon_status.push [what, @status]
+    File.write('status.bin', Marshal.dump(@my_status))
+    @common.events.denon_status.push [what, @my_status]
   end
   
   def on_display_brightness(brigtness)
@@ -93,12 +104,16 @@ class MyDenon < Denon
   def on_number_key(num)
     num = (if num == 0 then 10 else num end) - 1
 
-    case @mode
+    case @my_status.mode
     when :music
       load_playlist_by_index num
     when :radio
       @common.mpd.noidle do |mpd|
-        mpd.play(num)
+        begin
+          mpd.play(num)
+        rescue MPD::ServerArgumentError # index does not exist in playlist
+          mpd.stop
+        end
       end
     end
   end
@@ -220,9 +235,11 @@ class MyDenon < Denon
   end
 
   def change_mode(mode)
-    old_mode = @mode
-    @mode = mode
-    puts "#{old_mode} -> #{mode}"
+    old_mode = @my_status.mode
+    @my_status.mode = mode
+    @my_status.last_mode = mode unless mode.nil?
+
+    puts "Change mode: #{old_mode.inspect} -> #{mode.inspect}"
     
     return if old_mode == mode
 
@@ -270,7 +287,9 @@ class MyDenon < Denon
       enable_airplay
     end
     
-    @common.lcd_status({radio: "Radio", music: "Music", airplay: "AirPlay"}[mode])
+    mode_name = {radio: "Radio", music: "Music", airplay: "AirPlay"}[mode]
+    EM.system %Q{sudo -u kfigiela tmux display-message -c /dev/pts/1 "Mode: #{mode_name}"}
+    @common.lcd_status(mode_name)
   end
 
   def on_network_function(function)
@@ -296,7 +315,7 @@ class MyDenon < Denon
   def on_source(source)
     super
     if source == :network
-      change_mode (@mode or :music)
+      change_mode (@my_status.last_mode or :music)
     else
       change_mode nil
     end
@@ -311,5 +330,10 @@ class MyDenon < Denon
     change_mode nil
     stop_cd
     @common.lcd_backlight = 0
+  end
+  
+  def on_volume(vol)
+    super
+    EM.system %Q{sudo -u kfigiela tmux display-message -c /dev/pts/1 "Volume #{vol}"}
   end
 end
