@@ -51,9 +51,9 @@ class Denon < EventMachine::Connection
           
           bytes = packet.unpack("C*")
           checksum = bytes[0..-1].reduce(&:+) & 0xff
-          puts "Junk: #{start}"
-          display_buffer @buffer[0...start]
-          puts "Packet checksum #{checksum.to_s(16)}"
+          # puts "Junk: #{start}"
+          # display_buffer @buffer[0...start]
+          # puts "Packet checksum #{checksum.to_s(16)}"
           #display_buffer @buffer[start...(start+packet_length)]
 
           got_packet packet[6..-1]
