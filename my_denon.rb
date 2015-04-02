@@ -33,7 +33,7 @@ module MyOperations
 
   def disable_music
     @common.mpd.noidle do |mpd|
-      if mpd.current_song.time.nil? # for radio streams
+      if mpd.current_song and mpd.current_song.time.nil? # for radio streams
         mpd.stop
       end
       mpd.disableoutput 0
@@ -255,7 +255,7 @@ class MyDenon < Denon
       @common.mpd.noidle do |mpd|
         mpd.playlists.find { |p| p.name == ".musicplaylist" }.destroy
         mpd.save ".musicplaylist"
-        @music_pos = mpd.current_song.pos
+        @music_pos = if mpd.current_song then mpd.current_song.pos else nil end
       end
     end
 
