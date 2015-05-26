@@ -28,6 +28,9 @@ class Denon < EventMachine::Connection
   
   DAB_FREQS = {"5A" => 174.928, "5B" => 176.640, "5C" => 178.352, "5D" => 180.064, "6A" => 181.936, "6B" => 183.648, "6C" => 185.360, "6D" => 187.072, "7A" => 188.928, "7B" => 190.640, "7C" => 192.352, "7D" => 194.064, "8A" => 195.936, "8B" => 197.648, "8C" => 199.360, "8D" => 201.072, "9A" => 202.928, "9B" => 204.640, "9C" => 206.352, "9D" => 208.064, "10A" => 209.936, "10B" => 211.648, "10C" => 213.360, "10D" => 215.072, "10N" => 210.096, "11A" => 216.928, "11B" => 218.640, "11C" => 220.352, "11D" => 222.064, "11N" => 217.088, "12A" => 223.936, "12B" => 225.648, "12C" => 227.360, "12D" => 229.072, "12N" => 224.096, "13A" => 230.784, "13B" => 232.496, "13C" => 234.208, "13D" => 235.776, "13E" => 237.488, "13F" => 239.200}
   
+  DENON_VOLUME_MAX = 60
+  
+  
   def initialize
     @status = Status.new
   end
@@ -76,13 +79,19 @@ class Denon < EventMachine::Connection
   end
   
   def send_command(command)
-    packet = [0x00, 0xff, 0x55, command.length+1, 0x00, 0x00, 0x80, 0x00]
-    packet += command.bytes + [0x0d]
+    packet = []
+    len = command.length - 2
+    packet += [0xff, 0x55, len, 0x01,0x00]
+    packet += command.bytes.to_a
     checksum = packet.reduce(&:+) & 0xff
     packet << checksum
-    data = packet.pack("c*")
+    data = packet.pack("C*")
     puts "Sending"
     display_buffer data
+    @io.ioctl(0x5427) # turn break on
+    Kernel.sleep(0.01)
+    @io.ioctl(0x5428) # turn break off
+    # @io.break(@time) # this one uses TCSBRK ioctl
     send_data(data)
   end
 
@@ -376,4 +385,113 @@ class Denon < EventMachine::Connection
       end
     end
   end
+  
+  def source 
+    @status.source
+  end  
+  
+  def source=(source)
+    case source
+    when :aux1
+        send_command([0x25,0x00,0x00].pack("C*"))
+    when :aux2
+        send_command([0x26,0x00,0x00].pack("C*"))
+    when :digital
+        send_command([0x27,0x00,0x00].pack("C*"))
+    when :network
+        send_command([0x24,0x00,0x00].pack("C*"))
+    when :cd
+        send_command([0x23,0x00,0x00].pack("C*"))
+    when :tuner
+        send_command([0x20,0x00,0x00].pack("C*"))
+    when :tuner_dab
+        send_command([0x20,0x00,0x00].pack("C*"))
+    else
+      puts "Try to set invalid source #{source}"
+    end
+  end
+  
+  
+  def volume
+    @status.audio.volume or 0
+  end
+  
+  def volume=(vol)
+    if vol.is_a? Symbol
+      case vol
+      when :up
+        self.volume_up
+      when :down
+        self.volume_down
+      end
+    else
+      raise ArgumentError, "Negative volume" if vol < 0
+
+      if vol <= DENON_VOLUME_MAX
+        send_command([0x40,0x00,vol].pack("C*"))
+      else
+        send_command([0x40,0x00,DENON_VOLUME_MAX].pack("C*"))
+      end
+    end
+  end
+  
+  def volume_up
+    unless @status.audio.volume.nil?
+      self.volume = self.volume + 1
+    else
+      self.volume = 1
+    end
+  end
+ 
+  def volume_down
+    unless @status.audio.volume.nil?
+      self.volume = self.volume - 1
+    else
+      self.volume = 0
+    end
+  end
+  
+  def tuner_preset_forward
+    send_command([0x68,0x30,0x00].pack("C*"))
+  end
+ 
+  def tuner_preset_backward
+    send_command([0x68,0x30,0x01].pack("C*"))
+  end
+  
+  def amp_off
+    send_command([0x02,0x01,0x00].pack("C*"))
+  end
+
+  def mute
+    @status.audio.mute
+  end
+  
+  def mute=(new_mute = nil)
+    new_mute = mute if mute.nil?
+    if new_mute
+      send_command([0x41,0x00,0x01].pack("C*"))
+    else
+      send_command([0x41,0x00,0x00].pack("C*"))
+    end
+  end
+  
+
+  def display_brightness
+    @status.display_brightness
+  end
+
+  def display_brightness=(brightness)
+    case brightness
+    when :bright
+      send_command([0x43,0x00,0x00].pack("C*"))
+    when :dim
+      send_command([0x43,0x00,0x01].pack("C*"))
+    when :dark
+      send_command([0x43,0x00,0x02].pack("C*"))
+    when :off
+      send_command([0x43,0x00,0x03].pack("C*"))
+    end
+  end
+ 
 end
