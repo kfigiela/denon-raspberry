@@ -12,13 +12,15 @@ Icon = React.createClass
 
  ModeSelector =  React.createClass
   modes: [
-      {command:"ir:SRC_DRA_TUNER", icon:"fa-rss", name: "Tuner"},
-      {command:"ir:SRC_DNP_INTERNET_RADIO", icon:"fa-signal", name:"Internet Radio"},
-      {command:"ir:SRC_DNP_ONLINE_MUSIC", icon:"fa-music", name:"Music Player"},
-      {command:"ir:SRC_DNP_MUSIC_SERVER", icon:"fa-toggle-down", name: "AirPlay"},
-      {command:"ir:SRC_DCD_CD", icon:"fa-dot-circle-o", name: "CD"},
-      {command:"ir:SRC_DRA_DIGITAL", icon:"fa-laptop", name: "Digital"},
-      {command:"ir:SRC_DRA_ANALOG", icon:"fa-external-link-square", name: "Analog"}
+      {command:"source:tuner", icon:"fa-rss", name: "Tuner FM"},
+      {command:"source:tuner_dab", icon:"fa-rss", name: "Tuner DAB"},
+      {command:"source:internet_radio", icon:"fa-signal", name:"Internet Radio"},
+      {command:"source:online_music", icon:"fa-music", name:"Music Player"},
+      {command:"source:music_server", icon:"fa-toggle-down", name: "AirPlay"},
+      {command:"source:cd", icon:"fa-dot-circle-o", name: "CD"},
+      {command:"source:digital", icon:"fa-laptop", name: "Digital"},
+      {command:"source:aux1", icon:"fa-external-link-square", name: "Analog 1"}
+      {command:"source:aux2", icon:"fa-external-link-square", name: "Analog 2"}
   ]
   network_modes: {
       radio: {icon:"fa-signal", name:"Internet Radio"},
@@ -75,8 +77,8 @@ Header = React.createClass
         </div>
         <div className="navbar-collapse collapse">
           <ul className="nav navbar-nav navbar-right">
-            <li><Button onCommand={this.props.onCommand} command="ir:KEY_POWER" className="btn-ws"><Icon name="fa-power-off"/> Power ({this.props.data.denon.amp.power})</Button></li>
-            <li><Button onCommand={this.props.onCommand} command="ir:KEY_DISPLAYTOGGLE" className="btn-ws"><Icon name="fa-sun-o"/> Display ({this.props.data.denon.amp.display_brightness})</Button></li>
+            <li><Button onCommand={this.props.onCommand} command="denon:power!" className="btn-ws"><Icon name="fa-power-off"/> Power ({this.props.data.denon.amp.power})</Button></li>
+            <li><Button onCommand={this.props.onCommand} command="denon:display_brightness!" className="btn-ws"><Icon name="fa-sun-o"/> Display ({this.props.data.denon.amp.display_brightness})</Button></li>
             <li><Button onCommand={this.props.onCommand} command="ir:KEY_SLEEP" className="btn-ws"><Icon name="fa-clock-o"/> Sleep ({sleepStatus})</Button></li>
           </ul>
         </div>
@@ -164,9 +166,9 @@ Volume = React.createClass
     <nav className="navbar navbar-fixed-bottom">
       <div className="container">
         <div className="btn-group btn-group-lg btn-group-justified">
-          <Button onCommand={this.props.onCommand} command="ir:KEY_VOLUMEDOWN"><Icon name="fa-minus"/></Button>
-          <Button onCommand={this.props.onCommand} command="ir:KEY_MUTE">{getVolume()}</Button>
-          <Button onCommand={this.props.onCommand} command="ir:KEY_VOLUMEUP"><Icon name="fa-plus"/></Button>
+          <Button onCommand={this.props.onCommand} command="denon:volume_down"><Icon name="fa-minus"/></Button>
+          <Button onCommand={this.props.onCommand} command="denon:mute!">{getVolume()}</Button>
+          <Button onCommand={this.props.onCommand} command="denon:volume_up"><Icon name="fa-plus"/></Button>
         </div>
       </div>
     </nav>
@@ -198,7 +200,7 @@ DenonUI = React.createClass
           when "aux2" then <InfoMode icon="fa-external-link-square">Analog 2</InfoMode>
           else <div>not supported</div>
       else
-        <InfoMode icon="fa-power-off"><Button onCommand={this.handleCommand} command="ir:KEY_POWER" className="btn btn-lg btn-success btn-ws">Turn on!</Button></InfoMode>
+        <InfoMode icon="fa-power-off"><Button onCommand={this.handleCommand} command="denon:power!" className="btn btn-lg btn-success btn-ws">Turn on!</Button></InfoMode>
 
       <div>
         <Header data={this.state.data} onCommand={this.handleCommand}/>
@@ -206,7 +208,8 @@ DenonUI = React.createClass
         <Volume data={this.state.data} onCommand={this.handleCommand}/>
       </div>
     else
-      <div>connecting…</div>
+      <InfoMode icon="fa-cog fa-spin"><span>Connecting…</span></InfoMode>
+
 
 React.render(<DenonUI/>, document.getElementById('app'))
 

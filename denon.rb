@@ -56,10 +56,10 @@ class Denon < EventMachine::Connection
           checksum = bytes[0..-1].reduce(&:+) & 0xff
           # puts "Junk: #{start}"
           # display_buffer @buffer[0...start]
-          # puts "Packet checksum #{checksum.to_s(16)}"
-          #display_buffer @buffer[start...(start+packet_length)]
+          # puts "Packet checksum #{checksum.to_s(16)}
+          display_buffer @buffer[start...(start+packet_length)]
 
-          got_packet packet[6..-1]
+          got_packet packet[6..-1] if bytes[4] == 0 
 #          if checksum == bytes[-1]
  #           got_packet packet[6...-1] # packet without header and checksum
   #        else
@@ -75,6 +75,11 @@ class Denon < EventMachine::Connection
   
   def display_buffer(str)
     bytes = str.unpack("C*")
+    if bytes[4] == 0 
+      print "  "
+    else
+      print "\n> "
+    end
     puts ("%-40s" % bytes.map{|b|"%02x " % [b]}.join) + bytes.map{|b| b.chr}.join.scan(/[[:print:]]/).join.inspect
   end
   
@@ -82,7 +87,7 @@ class Denon < EventMachine::Connection
     packet = []
     len = command.length - 2
     packet += [0xff, 0x55, len, 0x01,0x00]
-    packet += command.bytes.to_a
+    packet += command
     checksum = packet.reduce(&:+) & 0xff
     packet << checksum
     data = packet.pack("C*")
@@ -208,12 +213,6 @@ class Denon < EventMachine::Connection
   end
   
   def got_packet(data)
-
-    begin
-      bytes = data.unpack("C*")
-      puts "Packet " +  ("%-40s" % bytes.map{|b|"%02x " % [b]}.join) + bytes.map{|b| b.chr}.join.scan(/[[:print:]]/).join
-    end
-    
     if @network_buttons.include? data
       on_network_button @network_buttons[data]
     elsif @cd_buttons.include? data
@@ -393,27 +392,38 @@ class Denon < EventMachine::Connection
   def source=(source)
     case source
     when :aux1
-        send_command([0x25,0x00,0x00].pack("C*"))
+        send_command([0x25,0x00,0x00])
     when :aux2
-        send_command([0x26,0x00,0x00].pack("C*"))
+        send_command([0x26,0x00,0x00])
     when :digital
-        send_command([0x27,0x00,0x00].pack("C*"))
+        send_command([0x27,0x00,0x00])
     when :network
-        send_command([0x24,0x00,0x00].pack("C*"))
+        send_command([0x24,0x00,0x00])
+    when :internet_radio
+      on_network_function :internet_radio
+      send_command([0x24,0x00,0x00])
+    when :online_music
+      on_network_function :online_music
+      send_command([0x24,0x00,0x00])
+    when :music_server
+      on_network_function :music_server
+      send_command([0x24,0x00,0x00])
+    when :network_usb
+      on_network_function :network_usb
+      send_command([0x24,0x00,0x00])
     when :cd
-        send_command([0x23,0x00,0x00].pack("C*"))
+        send_command([0x23,0x00,0x00])
     when :tuner
-        send_command([0x20,0x00,0x00].pack("C*"))
+        send_command([0x20,0x00,0x00])
     when :tuner_dab
-        send_command([0x20,0x00,0x00].pack("C*"))
+        send_command([0x20,0x00,0x00])
     else
       puts "Try to set invalid source #{source}"
     end
   end
-  
-  
+    
   def volume
-    @status.audio.volume or 0
+    @status.audio.volume or 5 # 5 is not silence, but not too loud
   end
   
   def volume=(vol)
@@ -428,9 +438,9 @@ class Denon < EventMachine::Connection
       raise ArgumentError, "Negative volume" if vol < 0
 
       if vol <= DENON_VOLUME_MAX
-        send_command([0x40,0x00,vol].pack("C*"))
+        send_command([0x40,0x00,vol])
       else
-        send_command([0x40,0x00,DENON_VOLUME_MAX].pack("C*"))
+        send_command([0x40,0x00,DENON_VOLUME_MAX])
       end
     end
   end
@@ -452,28 +462,27 @@ class Denon < EventMachine::Connection
   end
   
   def tuner_preset_forward
-    send_command([0x68,0x30,0x00].pack("C*"))
+    send_command([0x68,0x30,0x00])
   end
  
   def tuner_preset_backward
-    send_command([0x68,0x30,0x01].pack("C*"))
-  end
-  
-  def amp_off
-    send_command([0x02,0x01,0x00].pack("C*"))
+    send_command([0x68,0x30,0x01])
   end
 
   def mute
     @status.audio.mute
   end
   
-  def mute=(new_mute = nil)
-    new_mute = mute if mute.nil?
+  def mute=(new_mute)
     if new_mute
-      send_command([0x41,0x00,0x01].pack("C*"))
+      send_command([0x41,0x00,0x01])
     else
-      send_command([0x41,0x00,0x00].pack("C*"))
+      send_command([0x41,0x00,0x00])
     end
+  end
+  
+  def mute!
+    self.mute = !self.mute
   end
   
 
@@ -484,14 +493,54 @@ class Denon < EventMachine::Connection
   def display_brightness=(brightness)
     case brightness
     when :bright
-      send_command([0x43,0x00,0x00].pack("C*"))
+      send_command([0x43,0x00,0x00])
     when :dim
-      send_command([0x43,0x00,0x01].pack("C*"))
+      send_command([0x43,0x00,0x01])
     when :dark
-      send_command([0x43,0x00,0x02].pack("C*"))
+      send_command([0x43,0x00,0x02])
     when :off
-      send_command([0x43,0x00,0x03].pack("C*"))
+      send_command([0x43,0x00,0x03])
+    end
+    @status.display_brightness = brightness
+    on_status :display_brightness
+  end
+  
+  def display_brightness!
+    self.display_brightness = case @status.display_brightness
+    when :bright
+      :dim
+    when :dim
+      :dark
+    when :dark
+      :off
+    when :off
+      :bright
+    else
+      :bright
     end
   end
- 
+  
+  def power
+    @status.power == :on
+  end
+  
+  def power=(val)
+    if val
+      send_command([0x01, 0x02, 0x00])
+    else
+      send_command([0x02, 0x01, 0x00])
+    end
+  end
+
+  def power!
+    self.power = !self.power
+  end
+  
+  def send_number(number)
+    keys = [0x58, 0x4f, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57]
+    send_command([0x59, 0x00, 0x00]) if number > 9
+    EM.next_tick do
+      send_command([keys[number % 10],00,00]) 
+    end
+  end
 end

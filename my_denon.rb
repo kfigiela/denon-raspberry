@@ -47,6 +47,33 @@ module MyOperations
   def ir_send(device = "AVR10", button)
     @common.lirc.send_data "SEND_ONCE #{device} #{button}\n"
   end  
+  
+  def parse_command(data)
+    case data
+    when /^ir:(.*)$/
+      ir_send "Denon_RC-1163", $1
+    when /cd_ir:(.*)$/
+      ir_send "AVR10", $1
+    when /^denon:(.*)$$/
+      @common.denon.send $1.to_sym
+    when /tuner:tune:([12]?\d)$/
+      @common.denon.send_number $1.to_i
+    when "mpd:pause"
+      mpd_pause
+    when "mpd:next"
+      mpd :next
+    when "mpd:prev"
+      mpd :previous
+    when "mpd:next_album"
+      mpd_next_album
+    when "mpd:prev_album"
+      mpd_prev_album
+    when /^source:(.*)$/
+      @common.denon.source = $1.to_sym
+    else
+      puts "whaat? #{data}"
+    end
+  end
 end
 
 class MyDenon < Denon

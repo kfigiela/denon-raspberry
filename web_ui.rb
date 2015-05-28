@@ -16,6 +16,7 @@ end
 
 class WebSocketUI
   include MPDOperations
+  include MyOperations
     
   def initialize(common)
     @channels = {}
@@ -30,53 +31,23 @@ class WebSocketUI
       send_all
     end
   end
-  
-  def ir_send(device = "AVR10", button)
-    @common.lirc.send_data "SEND_ONCE #{device} #{button}\n"
-  end  
-  
+    
   def start
     EM::WebSocket.run(:host => "0.0.0.0", :port => 8080) do |ws|
       ws.onopen { |handshake|
         @channels[ws.object_id] = ws
-        puts "WebSocket connection open"
+        puts "WebUI: WebSocket connection open"
         send_all
       }
 
       ws.onclose { 
         @channels.delete(ws.object_id)
-        puts "Connection closed" 
+        puts "WebUI: Connection closed" 
       }
 
       ws.onmessage { |msg|        
-        puts "Recieved message: #{msg}"
-        case msg
-        when /^ir:(.*)$/
-          ir_send "Denon_RC-1163", $1
-        when /cd_ir:(.*)$/
-          ir_send "AVR10", $1
-        when /tuner:tune:(\d)$/
-          ir_send "Denon_RC-1163", "KEY_#{$1}"
-        when /tuner:tune:1(\d)$/
-          ir_send "Denon_RC-1163", "KEY_10"
-          EM.add_timer 0.1 do
-            ir_send "Denon_RC-1163", "KEY_#{$1}"
-          end
-        when "mpd:pause"
-          mpd_pause
-        when "mpd:next"
-          mpd :next
-        when "mpd:prev"
-          mpd :previous
-        when "mpd:next_album"
-          mpd_next_album
-        when "mpd:prev_album"
-          mpd_prev_album
-        when "lamp"
-          EM.defer { system "toggle_lamp" }
-        else
-          puts "whaat? #{msg}"
-        end
+        puts "WebUI: recieved message: #{msg}"
+        self.parse_command(msg)
       }
     end
   end

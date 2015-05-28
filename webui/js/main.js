@@ -26,33 +26,41 @@ Icon = React.createClass({
 ModeSelector = React.createClass({
   modes: [
     {
-      command: "ir:SRC_DRA_TUNER",
+      command: "source:tuner",
       icon: "fa-rss",
-      name: "Tuner"
+      name: "Tuner FM"
     }, {
-      command: "ir:SRC_DNP_INTERNET_RADIO",
+      command: "source:tuner_dab",
+      icon: "fa-rss",
+      name: "Tuner DAB"
+    }, {
+      command: "source:internet_radio",
       icon: "fa-signal",
       name: "Internet Radio"
     }, {
-      command: "ir:SRC_DNP_ONLINE_MUSIC",
+      command: "source:online_music",
       icon: "fa-music",
       name: "Music Player"
     }, {
-      command: "ir:SRC_DNP_MUSIC_SERVER",
+      command: "source:music_server",
       icon: "fa-toggle-down",
       name: "AirPlay"
     }, {
-      command: "ir:SRC_DCD_CD",
+      command: "source:cd",
       icon: "fa-dot-circle-o",
       name: "CD"
     }, {
-      command: "ir:SRC_DRA_DIGITAL",
+      command: "source:digital",
       icon: "fa-laptop",
       name: "Digital"
     }, {
-      command: "ir:SRC_DRA_ANALOG",
+      command: "source:aux1",
       icon: "fa-external-link-square",
-      name: "Analog"
+      name: "Analog 1"
+    }, {
+      command: "source:aux2",
+      icon: "fa-external-link-square",
+      name: "Analog 2"
     }
   ],
   network_modes: {
@@ -159,13 +167,13 @@ Header = React.createClass({
       "className": "nav navbar-nav navbar-right"
     }, React.createElement("li", null, React.createElement(Button, {
       "onCommand": this.props.onCommand,
-      "command": "ir:KEY_POWER",
+      "command": "denon:power!",
       "className": "btn-ws"
     }, React.createElement(Icon, {
       "name": "fa-power-off"
     }), " Power (", this.props.data.denon.amp.power, ")")), React.createElement("li", null, React.createElement(Button, {
       "onCommand": this.props.onCommand,
-      "command": "ir:KEY_DISPLAYTOGGLE",
+      "command": "denon:display_brightness!",
       "className": "btn-ws"
     }, React.createElement(Icon, {
       "name": "fa-sun-o"
@@ -324,15 +332,15 @@ Volume = React.createClass({
       "className": "btn-group btn-group-lg btn-group-justified"
     }, React.createElement(Button, {
       "onCommand": this.props.onCommand,
-      "command": "ir:KEY_VOLUMEDOWN"
+      "command": "denon:volume_down"
     }, React.createElement(Icon, {
       "name": "fa-minus"
     })), React.createElement(Button, {
       "onCommand": this.props.onCommand,
-      "command": "ir:KEY_MUTE"
+      "command": "denon:mute!"
     }, getVolume()), React.createElement(Button, {
       "onCommand": this.props.onCommand,
-      "command": "ir:KEY_VOLUMEUP"
+      "command": "denon:volume_up"
     }, React.createElement(Icon, {
       "name": "fa-plus"
     })))));
@@ -411,7 +419,7 @@ DenonUI = React.createClass({
             "icon": "fa-power-off"
           }, React.createElement(Button, {
             "onCommand": this.handleCommand,
-            "command": "ir:KEY_POWER",
+            "command": "denon:power!",
             "className": "btn btn-lg btn-success btn-ws"
           }, "Turn on!"));
         }
@@ -424,7 +432,9 @@ DenonUI = React.createClass({
         "onCommand": this.handleCommand
       }));
     } else {
-      return React.createElement("div", null, "connecting\u2026");
+      return React.createElement(InfoMode, {
+        "icon": "fa-spinner fa-spin"
+      }, React.createElement("span", null, "Connecting\u2026"));
     }
   }
 });
