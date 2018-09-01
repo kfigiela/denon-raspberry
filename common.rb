@@ -1,4 +1,5 @@
 require_relative 'lirc_handler'
+require 'metar'
 
 class Common
   # event channels
@@ -11,6 +12,8 @@ class Common
   attr_reader :mpd, :lirc
 
   attr_accessor :denon
+  
+  attr_reader :temperature
   
   def initialize
     @events = Struct.new(:mpd_song, :mpd_status, :mpd_playlist, :denon_status, :lcd_backlight, :lcd_status, :lcd_alerts, :actions).new
@@ -38,7 +41,7 @@ class Common
 
     update_status
     update_playlist
-    
+    init_temperature
   end
   
   def update_playlist
@@ -77,5 +80,19 @@ class Common
   
   def lcd_status text
     @events.lcd_status.push text
+  end
+    
+  def update_temperature
+#    station = Metar::Station.find_by_cccc('EPKK')
+#    @temperature  = station.parser.temperature.value.to_s + " C"
+#  rescue Exception => e
+#    puts "Can't get temp"
+#    p e    
+  end
+    
+  def init_temperature
+    @temperature = ""
+#    update_temperature
+#    EventMachine::PeriodicTimer.new(300) { update_temperature }
   end
 end

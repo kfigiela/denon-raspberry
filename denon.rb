@@ -98,6 +98,7 @@ class Denon < EventMachine::Connection
     @io.ioctl(0x5428) # turn break off
     # @io.break(@time) # this one uses TCSBRK ioctl
     send_data(data)
+    Kernel.sleep(0.1)
   end
 
   def on_status(what)
@@ -175,6 +176,7 @@ class Denon < EventMachine::Connection
     buttons = {
       0x33 => :stop,
       0x34 => :play,      
+      0x37 => :play,      
       0x44 => :next,
       0x45 => :previous,
       0x46 => :forward,
@@ -251,17 +253,17 @@ class Denon < EventMachine::Connection
         # on_source :digital
     
       ## Functions
-      when "\x5f\x00\x00" # CD
+      when "\x5f\x00\x00", "\x37\x00\x00" # CD
         on_cd_function :cd
-      when "\x60\x00\x00" # CD - ipod
+      when "\x60\x00\x00", "\x38\x00\x00" # CD - ipod
         on_cd_function :cd_usb
-      when "\x61\x00\x00"
+      when "\x61\x00\x00", "\x35\x00\x00"
         on_network_function :internet_radio
       when "\x63\x00\x00"
         on_network_function :online_music
       when "\x62\x00\x00" 
         on_network_function :music_server
-      when "\x64\x00\x00"
+      when "\x64\x00\x00", "\x36\x00\x00"
         on_network_function :network_usb
         
         
@@ -501,8 +503,7 @@ class Denon < EventMachine::Connection
     when :off
       send_command([0x43,0x00,0x03])
     end
-    @status.display_brightness = brightness
-    on_status :display_brightness
+    on_display_brightness brightness
   end
   
   def display_brightness!
@@ -534,6 +535,10 @@ class Denon < EventMachine::Connection
 
   def power!
     self.power = !self.power
+  end
+  
+  def sleep=(time)
+    send_command([0x7b,0x00,time&0xff])
   end
   
   def send_number(number)

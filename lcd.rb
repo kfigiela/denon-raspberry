@@ -118,7 +118,8 @@ class LCD
       # do nothing
     elsif status[:state] == :stop or status[:state] == :pause or song.nil?
         @line1 = ["\0 #{(@status or "---").rjust 14}"]
-        @line2 = [Time.now.strftime("%H:%M:%S").ljust(16)]
+        time = Time.now.strftime("%H:%M:%S")
+        @line2 = [time + @common.temperature.rjust(16-time.length)]
     else
       case @mode
       when 0
@@ -137,7 +138,8 @@ class LCD
 
   def refresh_screen
     if (@common.mpd_status[:state] == :stop or @common.mpd_status[:state] == :pause or @common.mpd_song.nil?) and @alert_timer.nil?
-      @line2 = [Time.now.strftime("%H:%M:%S").ljust(16)]
+      time = Time.now.strftime("%H:%M:%S")
+      @line2 = [time + @common.temperature.rjust(16-time.length)]
     end
     
     HD44780.puts @line1[(@counter/2) % @line1.length].ljust(16), 0

@@ -85,12 +85,16 @@ class DemoDenon < Denon
 end
 
 class KeyboardHandler < EM::Connection # this is for demo only
+  include EM::Protocols::LineText2
+  
   def initialize(denon)
     @denon = denon
+    @a = 0
   end
 
-  def receive_data(data)
-    pp @denon.status
+  def receive_line(data)
+    @denon.send_command "PWSTANDBY"
+    # pp @denon.status
   end
 end
 

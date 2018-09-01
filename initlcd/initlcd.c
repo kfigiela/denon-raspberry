@@ -1,3 +1,4 @@
+
 #include <unistd.h>
 #include <string.h>
 #include <wiringPiI2C.h>
@@ -58,14 +59,21 @@ int fd;
 bool backlight = true;
 char backlight_mask = LCD_BACKLIGHT;
 
+#define DELAY_STROBE_1 50
+#define DELAY_STROBE_2 50
+#define DELAY_WRITE_COMMAND 2000
+
+#define DELAY_INIT 35000
+#define DELAY_INIT_SHORT 50000
+
 // clocks EN to latch command
 void strobe(char data) {
   wiringPiI2CWrite(fd, (data & ~En) | backlight_mask);
-  usleep(10);
+  usleep(DELAY_STROBE_1);
   wiringPiI2CWrite(fd, data | En | backlight_mask);
-  usleep(1);
+  usleep(DELAY_STROBE_2);
   wiringPiI2CWrite(fd, ((data & ~En) | backlight_mask));
-  usleep(10);
+  usleep(DELAY_STROBE_1);
 }
 
 
@@ -76,12 +84,12 @@ void write_four_bits(char data) {
 void write_command(char cmd) {
   write_four_bits(0 | (cmd & 0xF0));
   write_four_bits(0 | ((cmd << 4) & 0xF0));
-  usleep(40);
+  usleep(DELAY_WRITE_COMMAND);
 }
 void write_data(char cmd) {
   write_four_bits(Rs | (cmd & 0xF0));
   write_four_bits(Rs | ((cmd << 4) & 0xF0));
-  usleep(40); 
+  usleep(DELAY_WRITE_COMMAND);
 }
 
 
@@ -91,41 +99,44 @@ void init() {
   wiringPiI2CWrite(fd, (0 | backlight_mask));
 
   strobe(0x03);
-  usleep(5000);
+  usleep(DELAY_INIT);
 
   strobe(0x03);
-  usleep(5000);
+  usleep(DELAY_INIT);
 
   strobe(0x03);
-  usleep(5000);
+  usleep(DELAY_INIT);
+
+  strobe(0x03);
+  usleep(DELAY_INIT);
 
   strobe(0x02);
-  usleep(200);
+  usleep(DELAY_INIT_SHORT);
 
   write_command(LCD_FUNCTIONSET | LCD_2LINE | LCD_5x8DOTS | LCD_4BITMODE);
-  usleep(200);
+  usleep(DELAY_INIT_SHORT);
 
   write_command(LCD_DISPLAYCONTROL);
-  usleep(200);
+  usleep(DELAY_INIT_SHORT);
 
   write_command(LCD_CLEARDISPLAY);
-  usleep(5000);
+  usleep(DELAY_INIT);
 
   write_command(LCD_CLEARDISPLAY);
-  usleep(5000);
+  usleep(DELAY_INIT);
 
   write_command(LCD_ENTRYMODESET | LCD_ENTRYLEFT);
-  usleep(200);
+  usleep(DELAY_INIT_SHORT);
 
   write_command(LCD_DISPLAYCONTROL | LCD_DISPLAYON | LCD_CURSORON | LCD_BLINKON);
-  usleep(200);
-  
+  usleep(DELAY_INIT_SHORT);
+
 }
 
 
 void set_backlight(bool value) {
   backlight = value;
-  backlight_mask = backlight ? LCD_BACKLIGHT : LCD_NOBACKLIGHT; 
+  backlight_mask = backlight ? LCD_BACKLIGHT : LCD_NOBACKLIGHT;
   write_command(0x80);
 }
 
@@ -141,7 +152,7 @@ void print(char * str, int line) {
 int main(int argc, char** argv) {
   fd = wiringPiI2CSetup(I2C_ADDRESS);
   init();
-  init();
+  // init();
   set_backlight(true);
   print("Please wait...",0);
   printf("Done\n");

@@ -1,3 +1,4 @@
+
 require_relative 'mpd_operations'
 
 TIOCSTI=0x00005412
@@ -15,12 +16,12 @@ module MyOperations
   end
 
   def enable_airplay
-    EM.system "systemctl start shairplay"
+    EM.system "systemctl start shairport-sync" # raspotify"
     @common.lcd_touch
   end
 
   def disable_airplay
-    EM.system "systemctl stop shairplay"
+    EM.system "systemctl stop shairport-sync" # raspotify"
     @common.lcd_touch
   end
 
@@ -39,21 +40,21 @@ module MyOperations
       mpd.disableoutput 0
     end
   end
-  
+
   def stop_cd
-    ir_send :AVR10, :CD_STOP
+    ir_send :HKHD7325, :CD_STOP
   end
-  
-  def ir_send(device = "AVR10", button)
+
+  def ir_send(device = "HKHD7325", button)
     @common.lirc.send_data "SEND_ONCE #{device} #{button}\n"
-  end  
-  
+  end
+
   def parse_command(data)
     case data
     when /^ir:(.*)$/
       ir_send "Denon_RC-1163", $1
     when /cd_ir:(.*)$/
-      ir_send "AVR10", $1
+      ir_send "HKHD7325", $1
     when /^denon:(.*)$$/
       @common.denon.send $1.to_sym
     when /tuner:tune:([12]?\d)$/
@@ -74,12 +75,21 @@ module MyOperations
       puts "whaat? #{data}"
     end
   end
+
+  def general_command(button)
+    case @common.denon.source
+    when :network
+      on_network_button button
+    when :cd
+      on_cd_button button
+    end
+  end
 end
 
 class MyDenon < Denon
   include MPDOperations
   include MyOperations
-  
+
   class MyStatus < Struct.new(:amp, :mode, :last_mode)
     def initialize
       super
@@ -88,13 +98,13 @@ class MyDenon < Denon
       self.last_mode = :music
     end
   end
-  
-  def initialize(common)    
+
+  def initialize(common)
     @common = common
-    
+
     @my_status = if File.exists?('status.bin')
       begin
-        File.open('status.bin') { |file| Marshal.load(file) } 
+        File.open('status.bin') { |file| Marshal.load(file) }
       rescue Exception => e
         puts "Failed reading state"
         puts e.message
@@ -105,7 +115,7 @@ class MyDenon < Denon
     end
 
     @status = @my_status.amp
-    
+
     on_status(:boot)
   end
 
@@ -113,21 +123,21 @@ class MyDenon < Denon
     File.write('status.bin', Marshal.dump(@my_status))
     @common.events.denon_status.push [what, @my_status]
   end
-  
+
   def on_display_brightness(brigtness)
     super
     @common.lcd_backlight = case brigtness
     when :bright
       1023
-    when :dim 
+    when :dim
       400
     when :dark
       200
     when :off
       0
     end
-  end  
-  
+  end
+
   def on_number_key(num)
     num = (if num == 0 then 10 else num end) - 1
 
@@ -144,13 +154,13 @@ class MyDenon < Denon
       end
     end
   end
-  
+
   def on_network_button(button)
     super
     @common.lcd_touch
     case button
     when :next
-      mpd :next      
+      mpd :next
     when :previous
       mpd :previous
     when :forward
@@ -173,7 +183,7 @@ class MyDenon < Denon
       mpd_pause
     when :play # for alarm clock
       disable_airplay
-      enable_music      
+      enable_music
     when :stop
       mpd :stop
     when :repeat
@@ -211,29 +221,55 @@ class MyDenon < Denon
       EM.system("toggle_display")
     end
   end
-  
-  
+
+
   def on_cd_button(button)
     super
     case button
     when :next
-      ir_send :AVR10, :CD_NEXT
+      ir_send :HKHD7325, :KEY_NEXT
     when :previous
-      ir_send :AVR10, :CD_PREV
+      ir_send :HKHD7325, :KEY_PREV
     when :forward
-      ir_send :AVR10, :CD_FWD
+      ir_send :HKHD7325, :KEY_FWD
     when :rewind
-      ir_send :AVR10, :CD_BKW
+      ir_send :HKHD7325, :KEY_BKW
     when :play_pause
-      ir_send :AVR10, :CD_PAUSE
+      ir_send :HKHD7325, :KEY_PAUSE
     when :play
-      ir_send :AVR10, :CD_PLAY
+      ir_send :HKHD7325, :KEY_PLAY
     when :stop
-      ir_send :AVR10, :CD_STOP
+      ir_send :HKHD7325, :KEY_STOP
     when :repeat
-      ir_send :AVR10, :CD_AB
+      ir_send :HKHD7325, :KEY_AGAIN
+    when :num10
+      ir_send :HKHD7325, :AB
+    when :program
+      ir_send :HKHD7325, :DISPLAY
+    when :info
+      ir_send :HKHD7325, :KEY_TIME
     when :random
-      ir_send :AVR10, :CD_INTRO
+      ir_send :HKHD7325, :RANDOM
+    when :num1
+      ir_send :HKHD7325, :KEY_1
+    when :num2
+      ir_send :HKHD7325, :KEY_2
+    when :num3
+      ir_send :HKHD7325, :KEY_3
+    when :num4
+      ir_send :HKHD7325, :KEY_4
+    when :num5
+      ir_send :HKHD7325, :KEY_5
+    when :num6
+      ir_send :HKHD7325, :KEY_6
+    when :num7
+      ir_send :HKHD7325, :KEY_7
+    when :num8
+      ir_send :HKHD7325, :KEY_8
+    when :num9
+      ir_send :HKHD7325, :KEY_9
+    when :num0
+      ir_send :HKHD7325, :KEY_0
     end
   end
 
@@ -241,8 +277,8 @@ class MyDenon < Denon
     super
     def mediakey(id)
       EM.system "ssh -n mormegil mediakey #{id.to_s}"
-    end  
-    
+    end
+
     case button
     when :next
       mediakey :next
@@ -267,7 +303,7 @@ class MyDenon < Denon
     @my_status.last_mode = mode unless mode.nil?
 
     puts "Change mode: #{old_mode.inspect} -> #{mode.inspect}"
-    
+
     return if old_mode == mode
 
     if old_mode == :airplay
@@ -277,7 +313,7 @@ class MyDenon < Denon
     if (mode != :music and mode != :radio) and (old_mode == :music or old_mode == :radio)
       disable_music
     end
-    
+
     if old_mode == :music
       @common.mpd.noidle do |mpd|
         mpd.playlists.find { |p| p.name == ".musicplaylist" }.destroy
@@ -286,7 +322,7 @@ class MyDenon < Denon
       end
     end
 
-    if old_mode == :radio      
+    if old_mode == :radio
       @common.mpd.noidle do |mpd|
         @radio_station = @common.mpd_status[:song]
         mpd.clear
@@ -300,20 +336,20 @@ class MyDenon < Denon
       nil
     when :radio
       enable_music
-      
+
       mpd_toggle :repeat, true
       mpd_toggle :single, true
-      
+
       load_playlist "Radio", @radio_station
     when :music
       mpd_toggle :repeat, false
       mpd_toggle :single, false
-      
+
       enable_music
     when :airplay
       enable_airplay
     end
-    
+
     mode_name = {radio: "Radio", music: "Music", airplay: "AirPlay"}[mode]
     EM.system %Q{sudo -u kfigiela tmux display-message -c /dev/pts/1 "Mode: #{mode_name}"}
     @common.lcd_status(mode_name)
@@ -324,21 +360,21 @@ class MyDenon < Denon
     case function
     when :internet_radio
       change_mode :radio
-    when :online_music
+    when :online_music, :network_usb
       change_mode :music
     when :music_server
       change_mode :airplay
     end
   end
-  
+
   def on_cd_function(function)
     super
     case function
     when :cd
-      ir_send :AVR10, :CD_PLAY
+      ir_send :HKHD7325, :CD_PLAY
     end
   end
-  
+
   def on_source(source)
     super
     if source == :network
@@ -346,19 +382,19 @@ class MyDenon < Denon
     else
       change_mode nil
     end
-    
+
     unless (source == :cd or source == :analog1)
       stop_cd
     end
   end
-  
+
   def on_amp_off
     super
     change_mode nil
     stop_cd
     @common.lcd_backlight = 0
   end
-  
+
   def on_volume(vol)
     super
     EM.system %Q{sudo -u kfigiela tmux display-message -c /dev/pts/1 "Volume #{vol}"}

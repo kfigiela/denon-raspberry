@@ -1,3 +1,4 @@
+
 #include <unistd.h>
 #include <string.h>
 #include <wiringPiI2C.h>
@@ -53,6 +54,13 @@
 
 #define I2C_ADDRESS 0x27
 
+#define DELAY_STROBE_1 50
+#define DELAY_STROBE_2 50
+#define DELAY_WRITE_COMMAND 200
+
+#define DELAY_INIT 35000
+#define DELAY_INIT_SHORT 50000
+
 typedef int bool;
 enum { false, true };
 
@@ -63,13 +71,12 @@ char backlight_mask = LCD_BACKLIGHT;
 // clocks EN to latch command
 void strobe(char data) {
   wiringPiI2CWrite(fd, (data & ~En) | backlight_mask);
-  usleep(1);
+  usleep(DELAY_STROBE_1);
   wiringPiI2CWrite(fd, data | En | backlight_mask);
-  usleep(1);
+  usleep(DELAY_STROBE_2);
   wiringPiI2CWrite(fd, ((data & ~En) | backlight_mask));
-  usleep(1);
+  usleep(DELAY_STROBE_1);
 }
-
 
 void write_four_bits(char data) {
   strobe(data);
@@ -78,54 +85,57 @@ void write_four_bits(char data) {
 void write_command(char cmd) {
   write_four_bits(0 | (cmd & 0xF0));
   write_four_bits(0 | ((cmd << 4) & 0xF0));
-	usleep(40);
+  usleep(DELAY_WRITE_COMMAND);
 }
 void write_data(char cmd) {
   write_four_bits(Rs | (cmd & 0xF0));
   write_four_bits(Rs | ((cmd << 4) & 0xF0));
-	usleep(40);	
+  usleep(DELAY_WRITE_COMMAND);
 }
 
 
 void init() {
-  wiringPiI2CWrite(fd, 0);		
-	usleep(5000);
+  wiringPiI2CWrite(fd, 0);
+  usleep(50000);
+  wiringPiI2CWrite(fd, (0 | backlight_mask));
 
   strobe(0x03);
-	usleep(5000);
+  usleep(DELAY_INIT);
 
   strobe(0x03);
-	usleep(5000);
+  usleep(DELAY_INIT);
 
   strobe(0x03);
-	usleep(5000);
+  usleep(DELAY_INIT);
+
+  strobe(0x03);
+  usleep(DELAY_INIT);
 
   strobe(0x02);
-	usleep(200);
+  usleep(DELAY_INIT_SHORT);
 
   write_command(LCD_FUNCTIONSET | LCD_2LINE | LCD_5x8DOTS | LCD_4BITMODE);
-  // write_command(LCD_FUNCTIONSET | LCD_2LINE | LCD_5x8DOTS | LCD_4BITMODE);
-	usleep(200);
+  usleep(DELAY_INIT_SHORT);
 
   write_command(LCD_DISPLAYCONTROL);
-  // write_command(LCD_DISPLAYCONTROL | LCD_DISPLAYON);
-	usleep(200);
+  usleep(DELAY_INIT_SHORT);
 
   write_command(LCD_CLEARDISPLAY);
-	usleep(4000);
+  usleep(DELAY_INIT);
 
-  write_command(LCD_ENTRYMODESET | LCD_ENTRYLEFT);	
-	usleep(200);
-  write_command(LCD_DISPLAYCONTROL | LCD_DISPLAYON);
+  write_command(LCD_CLEARDISPLAY);
+  usleep(DELAY_INIT);
 
-	usleep(20000);
+  write_command(LCD_ENTRYMODESET | LCD_ENTRYLEFT);
+  usleep(DELAY_INIT_SHORT);
 
+  write_command(LCD_DISPLAYCONTROL | LCD_DISPLAYON | LCD_CURSORON | LCD_BLINKON);
+  usleep(DELAY_INIT_SHORT);
 }
-
 
 void set_backlight(bool value) {
 	backlight = value;
-	backlight_mask = backlight ? LCD_BACKLIGHT : LCD_NOBACKLIGHT;	
+	backlight_mask = backlight ? LCD_BACKLIGHT : LCD_NOBACKLIGHT;
   write_command(0x80);
 }
 
@@ -145,7 +155,6 @@ void print(char * str, int line) {
 }
 
 VALUE rb_init(VALUE self) {
-	init();
 	init();
 	print("Hello!",0);
 	return Qnil;
@@ -174,7 +183,7 @@ VALUE rb_set_udc(VALUE self, VALUE idx, VALUE val) {
 	  rb_raise(rb_eArgError, "Need to provide array of 8 FixNums");
 		return Qnil;
 	}
-		
+
 	write_command(0x40 + ((FIX2INT(idx) & 0x07) << 3));
 	for(i = 0; i < 8; ++i) {
 		VALUE el = rb_ary_entry(ary, i);
@@ -186,7 +195,7 @@ VALUE rb_set_udc(VALUE self, VALUE idx, VALUE val) {
 
 void Init_hd44780() {
   VALUE HD44780 = rb_define_module("HD44780");
-	fd = wiringPiI2CSetup(I2C_ADDRESS);	
+	fd = wiringPiI2CSetup(I2C_ADDRESS);
   rb_define_singleton_method(HD44780, "init", rb_init, 0);
   rb_define_singleton_method(HD44780, "puts", rb_print, 2);
   rb_define_singleton_method(HD44780, "set_udc", rb_set_udc, 2);
