@@ -42,7 +42,10 @@ module MyOperations
   end
 
   def stop_cd
-    ir_send :HKHD7325, :CD_STOP
+    ir_send :HKHD7325, :KEY_STOP
+  end
+  def stop_tape
+    ir_send :SONY_DECK, :KEY_STOP
   end
 
   def ir_send(device = "HKHD7325", button)
@@ -276,7 +279,7 @@ class MyDenon < Denon
   def on_digital_button(button)
     super
     def mediakey(id)
-      EM.system "ssh -n mormegil mediakey #{id.to_s}"
+      # EM.system "ssh -n narsil.lan mediakey #{id.to_s}"
     end
 
     case button
@@ -294,7 +297,23 @@ class MyDenon < Denon
   end
 
   def on_analog1_button(button)
-    on_cd_button(button)
+    super
+    case button
+    when :next
+      ir_send :SONY_DECK, :KEY_PAUSE
+    when :forward
+      ir_send :SONY_DECK, :KEY_FWD
+    when :rewind
+      ir_send :SONY_DECK, :KEY_BKW
+    when :play_pause
+      ir_send :SONY_DECK, :KEY_PLAY
+    when :play
+      ir_send :SONY_DECK, :KEY_PLAY
+    when :stop
+      ir_send :SONY_DECK, :KEY_STOP
+    when :info
+      ir_send :SONY_DECK, :MEMORY
+    end
   end
 
   def change_mode(mode)
@@ -351,7 +370,7 @@ class MyDenon < Denon
     end
 
     mode_name = {radio: "Radio", music: "Music", airplay: "AirPlay"}[mode]
-    EM.system %Q{sudo -u kfigiela tmux display-message -c /dev/pts/1 "Mode: #{mode_name}"}
+    # EM.system %Q{sudo -u kfigiela tmux display-message -c /dev/pts/1 "Mode: #{mode_name}"}
     @common.lcd_status(mode_name)
   end
 
@@ -371,7 +390,7 @@ class MyDenon < Denon
     super
     case function
     when :cd
-      ir_send :HKHD7325, :CD_PLAY
+      ir_send :HKHD7325, :KEY_PLAY
     end
   end
 
@@ -383,20 +402,26 @@ class MyDenon < Denon
       change_mode nil
     end
 
-    unless (source == :cd or source == :analog1)
+    unless (source == :cd)
       stop_cd
     end
+    unless (source == :analog1)
+      stop_tape
+    end
+
+    @common.lcd_status({aux1: "Tape", aux2: "Phono", cd: "CD", digital: "Optical", tuner: "Tuner", network: "Net"}[source]) if source != :network
   end
 
   def on_amp_off
     super
     change_mode nil
     stop_cd
+    stop_tape
     @common.lcd_backlight = 0
   end
 
   def on_volume(vol)
     super
-    EM.system %Q{sudo -u kfigiela tmux display-message -c /dev/pts/1 "Volume #{vol}"}
+    # EM.system %Q{sudo -u kfigiela tmux display-message -c /dev/pts/1 "Volume #{vol}"}
   end
 end

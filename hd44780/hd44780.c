@@ -54,12 +54,12 @@
 
 #define I2C_ADDRESS 0x27
 
-#define DELAY_STROBE_1 50
-#define DELAY_STROBE_2 50
+#define DELAY_STROBE_1 200
+#define DELAY_STROBE_2 200
 #define DELAY_WRITE_COMMAND 200
 
-#define DELAY_INIT 35000
-#define DELAY_INIT_SHORT 50000
+#define DELAY_INIT 200
+#define DELAY_INIT_SHORT 200
 
 typedef int bool;
 enum { false, true };
@@ -95,24 +95,26 @@ void write_data(char cmd) {
 
 
 void init() {
-  wiringPiI2CWrite(fd, 0);
-  usleep(50000);
   wiringPiI2CWrite(fd, (0 | backlight_mask));
 
-  strobe(0x03);
-  usleep(DELAY_INIT);
+  // strobe(0x03);
+  // usleep(DELAY_INIT);
 
-  strobe(0x03);
-  usleep(DELAY_INIT);
+  // strobe(0x03);
+  // usleep(DELAY_INIT);
 
-  strobe(0x03);
-  usleep(DELAY_INIT);
+  // strobe(0x03);
+  // usleep(DELAY_INIT);
 
-  strobe(0x03);
-  usleep(DELAY_INIT);
+  // strobe(0x03);
+  // usleep(DELAY_INIT);
 
-  strobe(0x02);
-  usleep(DELAY_INIT_SHORT);
+  // strobe(0x02);
+  // usleep(DELAY_INIT_SHORT);
+
+  write_command(0x33);
+
+  write_command(0x32);
 
   write_command(LCD_FUNCTIONSET | LCD_2LINE | LCD_5x8DOTS | LCD_4BITMODE);
   usleep(DELAY_INIT_SHORT);
@@ -120,16 +122,16 @@ void init() {
   write_command(LCD_DISPLAYCONTROL);
   usleep(DELAY_INIT_SHORT);
 
-  write_command(LCD_CLEARDISPLAY);
-  usleep(DELAY_INIT);
+  // write_command(LCD_CLEARDISPLAY);
+  // usleep(DELAY_INIT);
 
-  write_command(LCD_CLEARDISPLAY);
-  usleep(DELAY_INIT);
+  // write_command(LCD_CLEARDISPLAY);
+  // usleep(DELAY_INIT);
 
   write_command(LCD_ENTRYMODESET | LCD_ENTRYLEFT);
   usleep(DELAY_INIT_SHORT);
 
-  write_command(LCD_DISPLAYCONTROL | LCD_DISPLAYON | LCD_CURSORON | LCD_BLINKON);
+  write_command(LCD_DISPLAYCONTROL | LCD_DISPLAYON | LCD_CURSOROFF | LCD_BLINKOFF);
   usleep(DELAY_INIT_SHORT);
 }
 
@@ -156,8 +158,12 @@ void print(char * str, int line) {
 
 VALUE rb_init(VALUE self) {
 	init();
-	print("Hello!",0);
 	return Qnil;
+}
+VALUE rb_clear(VALUE self) {
+  write_command(LCD_CLEARDISPLAY);
+  usleep(DELAY_INIT);
+  return Qnil;
 }
 
 VALUE rb_print(VALUE self, VALUE str, VALUE line) {
@@ -197,6 +203,7 @@ void Init_hd44780() {
   VALUE HD44780 = rb_define_module("HD44780");
 	fd = wiringPiI2CSetup(I2C_ADDRESS);
   rb_define_singleton_method(HD44780, "init", rb_init, 0);
+  rb_define_singleton_method(HD44780, "clear", rb_clear, 0);
   rb_define_singleton_method(HD44780, "puts", rb_print, 2);
   rb_define_singleton_method(HD44780, "set_udc", rb_set_udc, 2);
   rb_define_singleton_method(HD44780, "backlight=", rb_backlight_set, 1);

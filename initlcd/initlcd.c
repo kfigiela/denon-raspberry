@@ -59,12 +59,12 @@ int fd;
 bool backlight = true;
 char backlight_mask = LCD_BACKLIGHT;
 
-#define DELAY_STROBE_1 50
-#define DELAY_STROBE_2 50
-#define DELAY_WRITE_COMMAND 2000
+#define DELAY_STROBE_1 200
+#define DELAY_STROBE_2 200
+#define DELAY_WRITE_COMMAND 200
 
-#define DELAY_INIT 35000
-#define DELAY_INIT_SHORT 50000
+#define DELAY_INIT 200
+#define DELAY_INIT_SHORT 200
 
 // clocks EN to latch command
 void strobe(char data) {
@@ -98,20 +98,23 @@ void init() {
   usleep(50000);
   wiringPiI2CWrite(fd, (0 | backlight_mask));
 
-  strobe(0x03);
-  usleep(DELAY_INIT);
+  // strobe(0x03);
+  // usleep(DELAY_INIT);
 
-  strobe(0x03);
-  usleep(DELAY_INIT);
+  // strobe(0x03);
+  // usleep(DELAY_INIT);
 
-  strobe(0x03);
-  usleep(DELAY_INIT);
+  // strobe(0x03);
+  // usleep(DELAY_INIT);
 
-  strobe(0x03);
-  usleep(DELAY_INIT);
+  // strobe(0x03);
+  // usleep(DELAY_INIT);
 
-  strobe(0x02);
-  usleep(DELAY_INIT_SHORT);
+  // strobe(0x02);
+  // usleep(DELAY_INIT_SHORT);
+  write_command(0x33);
+
+  write_command(0x32);
 
   write_command(LCD_FUNCTIONSET | LCD_2LINE | LCD_5x8DOTS | LCD_4BITMODE);
   usleep(DELAY_INIT_SHORT);
@@ -119,16 +122,16 @@ void init() {
   write_command(LCD_DISPLAYCONTROL);
   usleep(DELAY_INIT_SHORT);
 
-  write_command(LCD_CLEARDISPLAY);
-  usleep(DELAY_INIT);
+  // write_command(LCD_CLEARDISPLAY);
+  // usleep(DELAY_INIT);
 
-  write_command(LCD_CLEARDISPLAY);
-  usleep(DELAY_INIT);
+  // write_command(LCD_CLEARDISPLAY);
+  // usleep(DELAY_INIT);
 
   write_command(LCD_ENTRYMODESET | LCD_ENTRYLEFT);
   usleep(DELAY_INIT_SHORT);
 
-  write_command(LCD_DISPLAYCONTROL | LCD_DISPLAYON | LCD_CURSORON | LCD_BLINKON);
+  write_command(LCD_DISPLAYCONTROL | LCD_DISPLAYON | LCD_BLINKOFF | LCD_CURSOROFF);
   usleep(DELAY_INIT_SHORT);
 
 }
@@ -154,6 +157,8 @@ int main(int argc, char** argv) {
   init();
   // init();
   set_backlight(true);
+  write_command(LCD_CLEARDISPLAY);
+  usleep(DELAY_INIT);
   print("Please wait...",0);
   printf("Done\n");
 }
