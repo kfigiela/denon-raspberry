@@ -25,6 +25,14 @@ module MyOperations
     @common.lcd_touch
   end
 
+  def enable_passthrough
+    EM.system "amixer cset name='Input Source' 'S/PDIF RX'"
+  end
+
+  def disable_passthrough
+    EM.system "amixer cset name='Input Source' AIF"
+  end
+
   def enable_music
     @common.mpd.noidle do |mpd|
       mpd.enableoutput 0
@@ -50,6 +58,7 @@ module MyOperations
 
   def ir_send(device = "HKHD7325", button)
     @common.lirc.send_data "SEND_ONCE #{device} #{button}\n"
+    puts "SEND_ONCE #{device} #{button}"
   end
 
   def parse_command(data)
@@ -222,6 +231,12 @@ class MyDenon < Denon
     when :num10
       @common.events.lcd_alerts.push ["Toggling display...", ""]
       EM.system("toggle_display")
+    when :add
+      tty_send " "
+    when :call
+      tty_send "\e[3~"
+    when :network_setup
+      #
     end
   end
 
@@ -316,6 +331,75 @@ class MyDenon < Denon
     end
   end
 
+
+  def on_analog2_button(button)
+    super
+    case button
+    when :up
+      ir_send :PANASONIC, :KEY_UP
+    when :down
+      ir_send :PANASONIC, :KEY_DOWN
+    when :right
+      ir_send :PANASONIC, :KEY_RIGHT
+    when :left
+      ir_send :PANASONIC, :KEY_LEFT
+    when :enter
+      ir_send :PANASONIC, :KEY_ENTER
+    when :random
+      ir_send :PANASONIC, :KEY_STOP
+    when :mode
+      ir_send :PANASONIC, :KEY_MENU
+    when :search
+      ir_send :PANASONIC, :KEY_BACK
+    when :num1
+      ir_send :PANASONIC, :KEY_EXIT
+    when :num2
+      ir_send :PANASONIC, :KEY_APPS
+    when :num3
+      ir_send :PANASONIC, :KEY_FAVORITE
+    when :num4
+      ir_send :PANASONIC, :KEY_PICTURE
+    when :num5
+      ir_send :PANASONIC, :KEY_SUBTITLE
+    when :num6
+      ir_send :PANASONIC, :KEY_HOME
+    when :num7
+      ir_send :PANASONIC, :KEY_CHANNELDOWN
+    when :num8
+      ir_send :PANASONIC, :KEY_VOLUMEUP
+    when :num9
+      ir_send :PANASONIC, :KEY_CHANNELUP
+    when :num0
+      ir_send :PANASONIC, :KEY_VOLUMEDOWN
+    when :play_pause
+      ir_send :PANASONIC, :KEY_PAUSE
+    when :stop
+      ir_send :PANASONIC, :KEY_STOP
+    when :rewind
+      ir_send :PANASONIC, :KEY_REWIND
+    when :forward
+      ir_send :PANASONIC, :KEY_FASTFORWARD
+    when :previous
+      ir_send :PANASONIC, :KEY_PREVIOUS
+    when :next
+      ir_send :PANASONIC, :KEY_NEXT
+    when :random
+      ir_send :PANASONIC, :KEY_OPTION
+    when :info
+      ir_send :PANASONIC, :KEY_INFO
+    when :program
+      ir_send :PANASONIC, :KEY_FAVORITE
+    when :num10
+      ir_send :PANASONIC, :KEY_POWER
+    when :add
+      ir_send :PANASONIC, :KEY_POWER
+    when :call
+      ir_send :PANASONIC, :KEY_APPS
+    when :network_setup
+      ir_send :PANASONIC, :KEY_BACK
+    end
+  end
+
   def change_mode(mode)
     old_mode = @my_status.mode
     @my_status.mode = mode
@@ -350,6 +434,10 @@ class MyDenon < Denon
       end
     end
 
+    if mode != :passthrough
+      disable_passthrough
+    end
+
     case mode
     when nil
       nil
@@ -367,9 +455,11 @@ class MyDenon < Denon
       enable_music
     when :airplay
       enable_airplay
+    when :passthrough
+      enable_passthrough
     end
 
-    mode_name = {radio: "Radio", music: "Music", airplay: "AirPlay"}[mode]
+    mode_name = {radio: "Radio", music: "Music", airplay: "AirPlay", passthrough: "Passthrough"}[mode]
     # EM.system %Q{sudo -u kfigiela tmux display-message -c /dev/pts/1 "Mode: #{mode_name}"}
     @common.lcd_status(mode_name)
   end
@@ -379,10 +469,12 @@ class MyDenon < Denon
     case function
     when :internet_radio
       change_mode :radio
-    when :online_music, :network_usb
+    when :online_music
       change_mode :music
     when :music_server
       change_mode :airplay
+    when :network_usb
+      change_mode :passthrough
     end
   end
 
@@ -409,7 +501,7 @@ class MyDenon < Denon
       stop_tape
     end
 
-    @common.lcd_status({aux1: "Tape", aux2: "Phono", cd: "CD", digital: "Optical", tuner: "Tuner", network: "Net"}[source]) if source != :network
+    @common.lcd_status({aux1: "Switch", aux2: "TV", cd: "CD", digital: "Mac", tuner: "Tuner", network: "Net"}[source]) if source != :network
   end
 
   def on_amp_off

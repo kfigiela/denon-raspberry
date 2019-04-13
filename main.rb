@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'bundler/setup' 
+require 'bundler/setup'
 
 require 'eventmachine'
 require 'pp'
@@ -15,10 +15,11 @@ require_relative 'common'
 require_relative 'preload'
 
 I18n.enforce_available_locales = false
+$stdout.sync = true
 
 EventMachine.run do
   common = Common.new
-  
+
   sp       = SerialPort.open("/dev/ttyUSB0", 115200, 8, 1, SerialPort::NONE)
   lcd      = LCD.new common
   webui    = WebSocketUI.new common
@@ -31,7 +32,7 @@ EventMachine.run do
   # common.events.mpd_status.subscribe { puts "MPD Status: #{common.mpd_status}" }
   # common.events.denon_status.subscribe { |status| puts "Denon Status: #{status}" }
 
-  Signal.trap("INT")  do 
+  Signal.trap("INT")  do
     lcd.puts_sync "Goodbye!          ", 0
     lcd.puts_sync "                 I", 1
     EventMachine.stop
@@ -39,7 +40,7 @@ EventMachine.run do
   Signal.trap("TERM") do
     lcd.puts_sync "Goodbye!          ", 0
     lcd.puts_sync "                 T", 1
-    EventMachine.stop 
+    EventMachine.stop
   end
   Signal.trap("USR1") do
     pp denon.status
