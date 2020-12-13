@@ -1,0 +1,44 @@
+<div><button type="button" onclick="fs();">fs</button></div>
+<style>body { margin:0;padding:0}</style>
+
+
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<!-- Or if you want a more recent canary version -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/hls.js@canary"></script> -->
+<div id="fs"><video id="video" style="width:100%; height: 100%"></video></div>
+<script>
+  var video = document.getElementById('video');
+  if(Hls.isSupported()) {
+    var hls = new Hls();
+    hls.loadSource('https://hls.ustreamix.com/Eurosport-1-Polska.m3u8?token=74d-06a-2bf-85d-d3d-f53-4fc-e7c-3d3-4af-073-25c-a22-435-4c9-e8b-370-59a-aed-e04-053-1');
+    hls.attachMedia(video);
+    hls.on(Hls.Events.MANIFEST_PARSED,function() {
+      video.play();
+  });
+ }
+ // hls.js is not supported on platforms that do not have Media Source Extensions (MSE) enabled.
+ // When the browser has built-in HLS support (check using `canPlayType`), we can provide an HLS manifest (i.e. .m3u8 URL) directly to the video element throught the `src` property.
+ // This is using the built-in support of the plain video element, without using hls.js.
+ // Note: it would be more normal to wait on the 'canplay' event below however on Safari (where you are most likely to find built-in HLS support) the video.src URL must be on the user-driven
+ // white-list before a 'canplay' event will be emitted; the last video event that can be reliably listened-for when the URL is not on the white-list is 'loadedmetadata'.
+  else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.src = 'https://hls.ustreamix.com/Eurosport-1-Polska.m3u8?token=74d-06a-2bf-85d-d3d-f53-4fc-e7c-3d3-4af-073-25c-a22-435-4c9-e8b-370-59a-aed-e04-053-1';
+    video.addEventListener('loadedmetadata',function() {
+      video.play();
+    });
+  }
+
+function fs() {
+var elem = document.getElementById("fs");
+if (elem.requestFullscreen) {
+  elem.requestFullscreen();
+} else if (elem.msRequestFullscreen) {
+  elem.msRequestFullscreen();
+} else if (elem.mozRequestFullScreen) {
+  elem.mozRequestFullScreen();
+} else if (elem.webkitRequestFullscreen) {
+  elem.webkitRequestFullscreen();
+}
+}
+</script>
+

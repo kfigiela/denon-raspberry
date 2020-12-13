@@ -8,7 +8,7 @@ module MPDOperations
       mpd.playlists.find { |p| p.name == name }.load
       mpd.play(pos)
     end
-  end 
+  end
 
   def load_playlist_by_index(index, pos = 0)
     @common.mpd.noidle do |mpd|
@@ -22,9 +22,7 @@ module MPDOperations
         mpd.play(pos) if pos
       end
     end
-  end 
-
-
+  end
 
   def mpd(action)
     @common.mpd.noidle do |mpd|
@@ -36,6 +34,24 @@ module MPDOperations
     @common.mpd.noidle do |mpd|
       val = (not mpd.status[action.to_sym]) if val.nil?
       mpd.send("#{action.to_s}=".to_sym, val)
+    end
+  end
+
+  def mpd_pause!
+    @common.mpd.noidle do |mpd|
+      if mpd.playing?
+        if mpd.current_song.time.nil? # for radio streams
+          mpd.stop
+        else
+          mpd.pause = 1
+        end
+      end
+    end
+  end
+
+  def mpd_play!
+    @common.mpd.noidle do |mpd|
+      mpd.play
     end
   end
 
@@ -52,8 +68,8 @@ module MPDOperations
       end
     end
   end
-  
-  
+
+
   def mpd_next_album
     @common.mpd.noidle do |mpd|
       idx = @common.playlist[(@common.mpd_status[:song])..(@common.mpd_status[:playlistlength])].find_index{|s| s.album != @common.mpd_song.album }
@@ -63,7 +79,7 @@ module MPDOperations
       end
     end
   end
-  
+
   def mpd_prev_album
     @common.mpd.noidle do |mpd|
       if @common.mpd_status[:song] > 0
@@ -71,9 +87,15 @@ module MPDOperations
         idx = @common.playlist[0...(@common.mpd_status[:song])].rindex {|s| s.album != current_song.album }
         if idx
           @common.events.lcd_alerts.push ["Album:", @common.playlist[idx+1].album]
-          mpd.play (idx+1) 
+          mpd.play (idx+1)
         end
       end
+    end
+  end
+
+  def mpd_seek(amt)
+    @common.mpd.noidle do |mpd|
+      mpd.seek(amt)
     end
   end
 end

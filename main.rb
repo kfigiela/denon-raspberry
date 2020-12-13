@@ -9,6 +9,7 @@ require_relative 'lcd'
 require_relative 'denon'
 require_relative 'my_denon'
 require_relative 'mpd_idle'
+require_relative 'cec'
 require_relative 'web_ui'
 require_relative 'udp'
 require_relative 'common'
@@ -26,6 +27,7 @@ EventMachine.run do
   udpui    = EventMachine.open_datagram_socket '0.0.0.0', 8080, UdpUI, common
   denon    = EventMachine.attach sp, MyDenon, common
   mpd_idle = EventMachine.connect '127.0.0.1', 6600, MPDIdle, common
+  cec      = EventMachine.popen "cec-client -t p", CEC, common
   preload  = Preload.new common
 
   common.denon = denon

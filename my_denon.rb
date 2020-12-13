@@ -1,4 +1,4 @@
-
+	
 require_relative 'mpd_operations'
 
 TIOCSTI=0x00005412
@@ -229,14 +229,22 @@ class MyDenon < Denon
     when :info
       @common.events.actions.push :info
     when :num10
-      @common.events.lcd_alerts.push ["Toggling display...", ""]
-      EM.system("toggle_display")
+      tty_send " "
     when :add
       tty_send " "
     when :call
       tty_send "\e[3~"
     when :network_setup
       #
+    # CEC-only
+    when :pause!
+      mpd_pause!
+    when :play!
+      mpd_play!
+    when :seek_forward
+      mpd_seek "+15"
+    when :seek_backward
+      mpd_seek "-15"
     end
   end
 
@@ -419,7 +427,8 @@ class MyDenon < Denon
 
     if old_mode == :music
       @common.mpd.noidle do |mpd|
-        mpd.playlists.find { |p| p.name == ".musicplaylist" }.destroy
+        p = mpd.playlists.find { |p| p.name == ".musicplaylist" }
+        p.destroy unless p.nil?
         mpd.save ".musicplaylist"
         @music_pos = if mpd.current_song then mpd.current_song.pos else nil end
       end
