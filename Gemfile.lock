@@ -17,7 +17,7 @@ GEM
       m9t (~> 0.3.1)
       rake
       rdoc
-    rake (10.4.2)
+    rake (13.0.1)
     rdoc (4.2.0)
       json (~> 1.4)
     ruby-mpd (0.3.1)
