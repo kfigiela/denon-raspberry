@@ -7,16 +7,16 @@ class CEC < EM::Connection
 
   def receive_data data
     case data
-    when /Key ([a-zA-Z0-9 ]+):/
+    when /Key ([a-zA-Z0-9 \(\)]+):/
       key = $1
       emulated_key =
         case key
         when "select" then :enter
         when "setup menu" then :network_setup
-        when "exit" then :mode
-        when "red" then :call
-        when "green" then :add
-        when "blue" then :clear
+        when "exit", "clear" then :mode
+        when "red", "F2 (red)" then :call
+        when "green", "F3 (green)" then :add
+        when "blue", "F1 (blue)" then :clear
         when "Fast forward" then :next
         when "rewind" then :previous
         when "backward" then :rewind

@@ -95,9 +95,11 @@ class Denon < EventMachine::Connection
     display_buffer data
     @io.ioctl(0x5427) # turn break on
     Kernel.sleep(0.01)
+    puts "brk"
     @io.ioctl(0x5428) # turn break off
-    # @io.break(@time) # this one uses TCSBRK ioctl
+    #@io.break(100) # this one uses TCSBRK ioctl
     send_data(data)
+    puts "sent"
     Kernel.sleep(0.1)
   end
 

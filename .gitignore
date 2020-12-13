@@ -2,3 +2,6 @@ status.bin
 *.o
 *.so
 hd44780/Makefile
+buttons
+initlcd/initlcd
+vendor/**

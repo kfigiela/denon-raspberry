@@ -10,6 +10,7 @@ end
 
 module MyOperations
   def tty_send(key)
+    puts key.inspect
     File.open('/dev/tty2','w') do |tty|
       key.chars { |char| tty.ioctl(TIOCSTI, char) }
     end
@@ -26,11 +27,11 @@ module MyOperations
   end
 
   def enable_passthrough
-    EM.system "amixer cset name='Input Source' 'S/PDIF RX'"
+    EM.system "amixer cset name='Tx Source' 'S/PDIF RX'"
   end
 
   def disable_passthrough
-    EM.system "amixer cset name='Input Source' AIF"
+    EM.system "amixer cset name='Tx Source' AIF"
   end
 
   def enable_music
@@ -57,7 +58,7 @@ module MyOperations
   end
 
   def ir_send(device = "HKHD7325", button)
-    @common.lirc.send_data "SEND_ONCE #{device} #{button}\n"
+    @common.lirc_tx.send_data "SEND_ONCE #{device} #{button}\n"
     puts "SEND_ONCE #{device} #{button}"
   end
 
@@ -188,7 +189,7 @@ class MyDenon < Denon
     when :right
       tty_send "\e[6~"
     when :enter
-      tty_send "\n"
+      tty_send "\r"
     when :mode
       tty_send "\t"
     when :play_pause
@@ -231,6 +232,7 @@ class MyDenon < Denon
     when :num10
       tty_send " "
     when :add
+      puts "add -> tty"
       tty_send " "
     when :call
       tty_send "\e[3~"

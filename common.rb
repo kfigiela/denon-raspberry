@@ -1,5 +1,5 @@
 require_relative 'lirc_handler'
-require 'metar'
+#require 'metar'
 
 class Common
   # event channels
@@ -9,7 +9,7 @@ class Common
   attr_reader :playlist, :mpd_status
   
   # connections
-  attr_reader :mpd, :lirc
+  attr_reader :mpd, :lirc, :lirc_tx
 
   attr_accessor :denon
   
@@ -38,6 +38,7 @@ class Common
     @mpd.async_idle
 
     @lirc = EventMachine.connect_unix_domain "/var/run/lirc/lircd", LIRCHandler, self
+    @lirc_tx = EventMachine.connect_unix_domain "/var/run/lirc/lircd-tx", LIRCHandler, self
 
     update_status
     update_playlist
