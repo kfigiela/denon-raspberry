@@ -251,7 +251,7 @@ class Denon < EventMachine::Connection
       when "\x02\x01\x00" # Amp off, (rendundant, also provided by ASCII protocol)
 
       ## Inputs (rendundant, also provided by ASCII protocol)
-      when "\x33\x00\x9b", "\x01\x03\x00" # Network
+      when "\x33\x13\x00", "\x33\x00\x9b", "\x01\x03\x00" # Network, second is error?
         # on_source :network
       when "\x33\x14\x00", "\x01\x04\x00" # CD
         # on_source :cd
