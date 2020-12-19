@@ -22,6 +22,8 @@ EventMachine.run do
   common = Common.new
 
   sp       = SerialPort.open("/dev/ttyUSB0", 115200, 8, 1, SerialPort::NONE)
+  sp.flow_control = SerialPort::NONE
+
   lcd      = LCD.new common
   webui    = WebSocketUI.new common
   udpui    = EventMachine.open_datagram_socket '0.0.0.0', 8080, UdpUI, common
