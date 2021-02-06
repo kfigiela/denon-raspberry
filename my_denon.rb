@@ -441,7 +441,11 @@ class MyDenon < Denon
         @radio_station = @common.mpd_status[:song]
         mpd.clear
         mpd.playlists.find { |p| p.name == ".musicplaylist" }.load
-        mpd.play(@music_pos)
+        begin
+          mpd.play(@music_pos)
+        rescue Exception => e
+          p e
+        end
       end
     end
 
@@ -525,6 +529,9 @@ class MyDenon < Denon
 
   def on_volume(vol)
     super
+    @common.mpd.noidle do |mpd|
+      mpd.volume = vol*2
+    end
     # EM.system %Q{sudo -u kfigiela tmux display-message -c /dev/pts/1 "Volume #{vol}"}
   end
 end

@@ -449,6 +449,7 @@ class Denon < EventMachine::Connection
         self.volume_down
       end
     else
+      return if volume == vol
       raise ArgumentError, "Negative volume" if vol < 0
 
       if vol <= DENON_VOLUME_MAX
