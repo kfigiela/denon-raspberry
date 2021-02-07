@@ -1,4 +1,4 @@
-	
+
 require_relative 'mpd_operations'
 
 TIOCSTI=0x00005412
@@ -58,7 +58,7 @@ module MyOperations
   end
 
   def ir_send(device = "HKHD7325", button)
-    @common.lirc_tx.send_data "SEND_ONCE #{device} #{button}\n"
+    @common.lirc.send_data "SEND_ONCE #{device} #{button}\n"
     puts "SEND_ONCE #{device} #{button}"
   end
 
@@ -441,11 +441,11 @@ class MyDenon < Denon
         @radio_station = @common.mpd_status[:song]
         mpd.clear
         mpd.playlists.find { |p| p.name == ".musicplaylist" }.load
-        begin
-          mpd.play(@music_pos)
-        rescue Exception => e
-          p e
-        end
+        #begin
+        #  mpd.play(@music_pos)
+        #rescue Exception => e
+        #  p e
+        #end
       end
     end
 

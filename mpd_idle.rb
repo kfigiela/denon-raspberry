@@ -2,16 +2,16 @@ class MPDIdle < EM::Connection
   def initialize(common)
     @common = common
   end
-  
+
   def post_init
     @common.mpd.noidle do |mpd|
       song = mpd.current_song
       status = mpd.status
     end
   end
-  
+
   def send_idle
-    send_data "idle player options playlist mixer\n"
+    send_data "idle player options mixer\n"
   end
 
   def receive_data(data)
@@ -38,13 +38,7 @@ class MPDIdle < EM::Connection
             p status
           end
         end
-      when 'playlist'
-        @common.mpd.noidle do |mpd|
-          status = mpd.status
-          @common.events.mpd_status.push status
-        end
-        @common.events.mpd_playlist.push nil
-      else 
+      else
         puts "unknown #{$1}"
       end
     end

@@ -8,7 +8,7 @@ class LIRCHandler < EM::Connection
   def ir_send(device = "HKHD7325", button)
     EM.add_timer(0.1) do
       puts "SEND_ONCE #{device} #{button}"
-      @common.lirc_tx.send_data "SEND_ONCE #{device} #{button}\n"
+      @common.lirc.send_data "SEND_ONCE #{device} #{button}\n"
     end
   end
 
@@ -17,7 +17,7 @@ class LIRCHandler < EM::Connection
 #    when "00002a4c0a4182c9 00 SRC_DNP_INTERNET_RADIO Denon_RC-1163\n"
 #      @common.denon.on_network_function :internet_radio
 #    when "00002a4c0a4582cd 00 SRC_DNP_ONLINE_MUSIC Denon_RC-1163\n"
-#      @common.denon.on_network_function :online_music	
+#      @common.denon.on_network_function :online_music
 #    when "00002a4c0a4982c1 00 SRC_DNP_MUSIC_SERVER Denon_RC-1163\n"
 #      @common.denon.on_network_function :music_server
 #    when "00002a4c0a4d82c5 00 SRC_DNP_USB Denon_RC-1163\n"

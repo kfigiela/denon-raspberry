@@ -1,10 +1,10 @@
 require 'ruby-mpd'
 
-class MPD 
+class MPD
   def idle(*subsystems)
     self.send_command('idle',*subsystems)
   end
-  
+
   def async_idle
     raise ConnectionError, "Not connected to the server!" if !@socket
     @mutex.synchronize do
@@ -16,29 +16,41 @@ class MPD
       end
    end
  end
- 
+
  def noidle
    @idle_lock ||= Mutex.new
-   
+
    EM.defer do
      @idle_lock.synchronize do
        self.send_command 'noidle'
-       yield self
+       begin
+         yield self
+       rescue MPD::ServerArgumentError => e
+         p e
+       rescue MPD::NotPlaying => e
+         p e
+       end
        self.async_idle
      end
    end
  end
- 
+
  def noidle_sync
    @idle_lock ||= Mutex.new
-   
+
    @idle_lock.synchronize do
      self.send_command 'noidle'
-     yield self
+     begin
+       yield self
+     rescue MPD::ServerArgumentError => e
+       p e
+     rescue MPD::NotPlaying => e
+       p e
+     end
      self.async_idle
    end
  end
- 
+
  class Song
    def as_json
      {title: title, artist: artist, album: album}

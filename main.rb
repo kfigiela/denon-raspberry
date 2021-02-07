@@ -13,7 +13,6 @@ require_relative 'cec'
 require_relative 'web_ui'
 require_relative 'udp'
 require_relative 'common'
-require_relative 'preload'
 
 I18n.enforce_available_locales = false
 $stdout.sync = true
@@ -30,7 +29,6 @@ EventMachine.run do
   denon    = EventMachine.attach sp, MyDenon, common
   mpd_idle = EventMachine.connect '127.0.0.1', 6600, MPDIdle, common
   cec      = EventMachine.popen "cec-client -t p", CEC, common
-  preload  = Preload.new common
 
   common.denon = denon
   # common.events.mpd_status.subscribe { puts "MPD Status: #{common.mpd_status}" }
